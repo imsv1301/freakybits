@@ -1,0 +1,124 @@
+name: BuzzBits Daily Pipeline
+
+on:
+  # ── 4 runs per day at IST times (UTC = IST - 5:30) ──────────────
+  # 7:00 AM  IST = 01:30 UTC
+  # 12:00 PM IST = 06:30 UTC
+  # 6:00 PM  IST = 12:30 UTC
+  # 10:00 PM IST = 16:30 UTC
+  schedule:
+    - cron: '30 1  * * *'   # 7:00 AM  IST — Morning batch
+    - cron: '30 6  * * *'   # 12:00 PM IST — Afternoon batch
+    - cron: '30 12 * * *'   # 6:00 PM  IST — Evening batch
+    - cron: '30 16 * * *'   # 10:00 PM IST — Night batch
+
+  # Manual trigger — useful for testing or custom topics
+  workflow_dispatch:
+    inputs:
+      force_niche:
+        description: 'Force a specific niche (horror_facts / comedy_facts / ai_tech)'
+        required: false
+        default: ''
+
+jobs:
+  buzzBits-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120    # 3 videos × 4 scenes × ~8 min each = ~96 min max
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: 📦 Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🎬 Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+
+      - name: 📁 Create output directory
+        run: mkdir -p buzzBits_output
+
+      - name: 🔑 Write YouTube client secrets
+        run: |
+          echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > youtube_secrets.json
+
+      - name: 🔑 Restore YouTube OAuth token
+        run: |
+          if [ -n "${{ secrets.YOUTUBE_TOKEN_B64 }}" ]; then
+            echo '${{ secrets.YOUTUBE_TOKEN_B64 }}' | base64 -d > buzzBits_output/yt_token.pickle
+            echo "✅ YouTube token restored"
+          else
+            echo "⚠️ No YouTube token found — first run will need manual auth"
+          fi
+
+      - name: 📂 Restore Part 1 topic (for Part 2 continuity)
+        run: |
+          if [ -n "${{ secrets.PART1_TOPIC_JSON }}" ]; then
+            echo '${{ secrets.PART1_TOPIC_JSON }}' > buzzBits_output/part1_topic.json
+            echo "✅ Part 1 topic restored"
+          else
+            echo "ℹ️ No Part 1 topic yet — will be created on first Part 1 run"
+          fi
+
+      - name: 🚀 Run BuzzBits Pipeline
+        env:
+          GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+          INSTAGRAM_TOKEN:       ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_ACCOUNT_ID:  ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+          FORCE_NICHE:           ${{ github.event.inputs.force_niche }}
+        run: python pipeline.py
+
+      - name: 💾 Save refreshed YouTube token
+        if: always()
+        run: |
+          if [ -f buzzBits_output/yt_token.pickle ]; then
+            TOKEN_B64=$(base64 -w 0 buzzBits_output/yt_token.pickle)
+            echo "YOUTUBE_TOKEN_B64=$TOKEN_B64" >> $GITHUB_ENV
+            echo "✅ Token ready to update in secrets"
+          fi
+
+      - name: 💾 Save Part 1 topic for next run
+        if: always()
+        run: |
+          if [ -f buzzBits_output/part1_topic.json ]; then
+            PART1=$(cat buzzBits_output/part1_topic.json)
+            echo "Part 1 topic: $PART1"
+            echo "⚠️  ACTION NEEDED: Copy the above JSON and update your"
+            echo "   GitHub Secret 'PART1_TOPIC_JSON' with this value"
+            echo "   so the next Part 2 run can continue the story!"
+          fi
+
+      - name: 📤 Upload video artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: buzzBits-videos-run-${{ github.run_number }}
+          path: |
+            buzzBits_output/*.mp4
+            buzzBits_output/*.json
+          retention-days: 3
+
+      - name: 📋 Show run summary
+        if: always()
+        run: |
+          echo "## BuzzBits Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          if [ -f buzzBits_output/run_log_*.json ]; then
+            echo "**Log:**" >> $GITHUB_STEP_SUMMARY
+            cat buzzBits_output/run_log_*.json >> $GITHUB_STEP_SUMMARY
+          fi
