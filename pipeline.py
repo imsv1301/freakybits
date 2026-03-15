@@ -86,8 +86,64 @@ TRENDING_SONGS_FREE = [
 
 OUT              = Path("buzzBits_output")
 OUT.mkdir(exist_ok=True)
-PART1_TOPIC_FILE = OUT / "part1_topic.json"
+PART1_TOPIC_FILE  = OUT / "part1_topic.json"
+USED_TOPICS_FILE  = OUT / "used_topics.json"
+ANALYTICS_FILE    = OUT / "analytics.json"
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+# ══════════════════════════════════════════════════════════════════
+#  TOPIC DEDUPLICATION — prevents repeating same topics
+# ══════════════════════════════════════════════════════════════════
+def load_used_topics() -> dict:
+    if not USED_TOPICS_FILE.exists():
+        return {}
+    try:
+        with open(USED_TOPICS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_used_topic(topic: str, niche_name: str):
+    topics = load_used_topics()
+    key = topic.lower().strip()
+    topics[key] = {"niche": niche_name, "used_at": datetime.datetime.utcnow().isoformat()}
+    # Keep last 500 topics only
+    if len(topics) > 500:
+        oldest = sorted(topics.items(), key=lambda x: x[1].get("used_at",""))[:100]
+        for k, _ in oldest:
+            del topics[k]
+    with open(USED_TOPICS_FILE, "w", encoding="utf-8") as f:
+        json.dump(topics, f, ensure_ascii=False, indent=2)
+
+def is_topic_used(topic: str) -> bool:
+    topics = load_used_topics()
+    return topic.lower().strip() in topics
+
+
+# ══════════════════════════════════════════════════════════════════
+#  ANALYTICS LOGGER — tracks every upload for portfolio metrics
+# ══════════════════════════════════════════════════════════════════
+def log_analytics(video_result: dict):
+    try:
+        analytics = []
+        if ANALYTICS_FILE.exists():
+            with open(ANALYTICS_FILE, "r", encoding="utf-8") as f:
+                analytics = json.load(f)
+        analytics.append({
+            "date":      datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "title":     video_result.get("title", ""),
+            "niche":     video_result.get("niche", ""),
+            "language":  video_result.get("language", ""),
+            "youtube":   video_result.get("youtube", ""),
+            "instagram": video_result.get("instagram", ""),
+            "topic":     video_result.get("topic", ""),
+        })
+        with open(ANALYTICS_FILE, "w", encoding="utf-8") as f:
+            json.dump(analytics, f, ensure_ascii=False, indent=2)
+        print(f"   📊 Analytics logged ({len(analytics)} total videos)")
+    except Exception as e:
+        print(f"   ⚠️  Analytics log failed: {e}")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -149,10 +205,18 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
         prev = part1_data.get("topic", "previous topic") if part1_data else "previous topic"
         part_instruction = f'PART 2 of 2: Continue from "{prev}". Title ends with (Part 2). Satisfying conclusion.'
 
+    # Build list of recently used topics to avoid repeats
+    used = load_used_topics()
+    recent_topics = list(used.keys())[-20:] if used else []
+    avoid_str = ""
+    if recent_topics:
+        avoid_str = f"\nAVOID these recently used topics: {', '.join(recent_topics[:10])}"
+
     prompt = f"""You are a viral content creator for FreakyBits — YouTube/Instagram shorts.
 Niche: {niche['label']} | Tone: {niche['tone']} | Date: {today}
 {lang_instruction}
 {part_instruction}
+{avoid_str}
 
 Create a 32-second short. Narration = 4 short punchy facts/beats, NO filler words.
 IMPORTANT: Write narration as ONE continuous flow — no paragraph breaks, no pauses.
@@ -551,26 +615,37 @@ def upload_youtube(video_path, content):
             pickle.dump(creds, f)
 
     yt = build("youtube", "v3", credentials=creds)
-    resp = yt.videos().insert(
-        part="snippet,status",
-        body={
-            "snippet": {
-                "title":       content["youtube_title"],
-                "description": content.get("youtube_description_final", content["youtube_description"]),
-                "tags":        content["youtube_tags"],
-                "categoryId":  "22",
-            },
-            "status": {
-                "privacyStatus": "public",
-                "selfDeclaredMadeForKids": False,
-            }
-        },
-        media_body=MediaFileUpload(str(video_path), mimetype="video/mp4", chunksize=-1, resumable=True)
-    ).execute()
 
-    url = f"https://youtube.com/watch?v={resp['id']}"
-    print(f"   ✅ YouTube → {url}")
-    return url
+    # Retry logic — exponential backoff (3 attempts)
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = yt.videos().insert(
+                part="snippet,status",
+                body={
+                    "snippet": {
+                        "title":       content["youtube_title"],
+                        "description": content.get("youtube_description_final", content["youtube_description"]),
+                        "tags":        content["youtube_tags"],
+                        "categoryId":  "22",
+                    },
+                    "status": {
+                        "privacyStatus": "public",
+                        "selfDeclaredMadeForKids": False,
+                    }
+                },
+                media_body=MediaFileUpload(str(video_path), mimetype="video/mp4", chunksize=-1, resumable=True)
+            ).execute()
+            url = f"https://youtube.com/watch?v={resp['id']}"
+            print(f"   ✅ YouTube → {url}")
+            return url
+        except Exception as e:
+            if attempt < max_retries:
+                wait = 2 ** attempt  # 2s, 4s backoff
+                print(f"   ⚠️  Upload attempt {attempt} failed: {e} — retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -638,11 +713,18 @@ def make_one_video(video_idx):
     if part == 1:
         save_part1_topic(content["topic"], niche["name"], lang["code"])
 
-    return {
+    # Save used topic to avoid repeats
+    save_used_topic(content["topic"], niche["name"])
+
+    result = {
         "video": str(video), "niche": niche["label"], "language": lang["label"],
         "part": part, "topic": content["topic"], "title": content["youtube_title"],
         "youtube": yt_url, "instagram": ig_url,
     }
+
+    # Log analytics
+    log_analytics(result)
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════
