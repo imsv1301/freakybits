@@ -1,208 +1,162 @@
-# BuzzBits — Fully Automated Daily Video Pipeline
-## 12 cinematic AI videos posted daily to YouTube + Instagram. Zero manual work.
+# 🎬 FreakyBits — AI Video Automation Pipeline
+
+> Fully automated short-form video pipeline that generates and uploads 6 AI-powered videos/day to YouTube Shorts and Instagram Reels — zero manual work.
+
+[![Pipeline](https://github.com/imsv1301/freakybits/actions/workflows/buzzBits_daily.yml/badge.svg)](https://github.com/imsv1301/freakybits/actions)
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-## What Happens Every Day (Automatically)
+## 🏗️ Architecture
 
-| Time (IST) | Action |
-|-----------|--------|
-| 7:00 AM   | 3 videos generated + uploaded |
-| 12:00 PM  | 3 videos generated + uploaded |
-| 6:00 PM   | 3 videos generated + uploaded |
-| 10:00 PM  | 3 videos generated + uploaded |
-| **Total** | **12 videos/day, 84/week, 360/month** |
-
-Each video is:
-- **12-16 seconds** of cinematic Veo 3.1 footage
-- Niche auto-rotates: Horror Facts 👻 / Comedy Facts 😂 / AI & Tech 🤖
-- AI voiceover matching the script
-- Platform-specific captions with trending hashtags
-- Auto-uploaded to YouTube + Instagram
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    GitHub Actions (Free)                     │
+│                  7AM + 7PM IST — Daily Cron                 │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+              ┌────────────▼────────────┐
+              │   pipeline.py (Main)    │
+              └────────────┬────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+┌───────▼──────┐  ┌────────▼───────┐  ┌──────▼───────┐
+│ Step 1       │  │ Step 2         │  │ Step 3        │
+│ Gemini Flash │  │ Edge TTS       │  │ Pexels API    │
+│ Script+Captions│ │ Neural Voice   │  │ HD Stock Video│
+│ (Free API)   │  │ (Free)         │  │ (Free API)    │
+└───────┬──────┘  └────────┬───────┘  └──────┬───────┘
+        │                  │                  │
+        └──────────────────▼──────────────────┘
+                           │
+              ┌────────────▼────────────┐
+              │   Step 4: FFmpeg        │
+              │ • 9:16 vertical crop    │
+              │ • Dark cinematic filter │
+              │ • Bold subtitle overlay │
+              │ • Muted song mix        │
+              └────────────┬────────────┘
+                           │
+              ┌────────────▼────────────┐
+              │   Step 5: Upload        │
+              │ • YouTube Shorts        │
+              │ • Instagram Reels       │
+              └─────────────────────────┘
+```
 
 ---
 
-## One-Time Setup (Do This Once)
+## ✨ Features
 
-### 1. Get Free Gemini API Key
-1. Go to **https://aistudio.google.com**
-2. Sign in with your Google account
-3. Click **"Get API Key"** → **"Create API key in new project"**
-4. Copy the key (starts with `AIza...`)
-
-> Free quota: 1000 text requests/day + Veo video generation via your Gemini Pro credits
+| Feature | Details |
+|---------|---------|
+| **Auto Script** | Gemini 2.5 Flash generates viral scripts with SEO titles + hashtags |
+| **Neural Voice** | Edge TTS (Microsoft) — Christopher (EN) / Madhur (HI) |
+| **HD Video** | Pexels API — portrait 9:16 cinematic clips |
+| **Bold Subtitles** | FFmpeg burns large white uppercase subtitles word-by-word |
+| **Bilingual** | EN → HI → EN pattern per run |
+| **4 Niches** | Horror 👻 Comedy 😂 AI&Tech 🤖 Storytelling 📖 |
+| **Part Series** | Part 1 / Part 2 cliffhanger format for engagement |
+| **Topic Dedup** | Tracks last 500 topics — never repeats |
+| **Retry Logic** | Exponential backoff on upload failures |
+| **Analytics** | Logs every upload to JSON for tracking |
+| **Free Forever** | Runs on GitHub Actions free tier (2x daily = ~1,200 mins/month) |
 
 ---
 
-### 2. Set Up YouTube API
+## 🚀 Quick Start
 
-**A. Enable the API:**
-1. Go to **https://console.cloud.google.com**
-2. Create a new project (name it `buzzBits`)
-3. Go to **APIs & Services** → **Library**
-4. Search **"YouTube Data API v3"** → Click → **Enable**
+### Prerequisites
+- GitHub account
+- Google AI Studio API key (free) — [aistudio.google.com](https://aistudio.google.com)
+- Pexels API key (free) — [pexels.com/api](https://www.pexels.com/api)
+- YouTube OAuth credentials — Google Cloud Console
 
-**B. Create OAuth Credentials:**
-1. Go to **APIs & Services** → **Credentials**
-2. Click **"+ Create Credentials"** → **"OAuth 2.0 Client ID"**
-3. Application type: **Desktop app**
-4. Name: `buzzBits`
-5. Click **Create** → **Download JSON**
-6. This is your `youtube_secrets.json` file — keep it safe!
+### Setup
+1. Fork this repo
+2. Add GitHub Secrets (Settings → Secrets → Actions):
 
-**C. First-Time Authentication (run once on your PC):**
+| Secret | Description |
+|--------|-------------|
+| `GEMINI_API_KEY` | Google AI Studio key |
+| `PEXELS_API_KEY` | Pexels API key |
+| `YOUTUBE_CLIENT_SECRETS` | OAuth JSON from Google Cloud |
+| `YOUTUBE_TOKEN_B64` | Base64-encoded pickle token |
+| `INSTAGRAM_TOKEN` | Meta Graph API token (optional) |
+| `INSTAGRAM_ACCOUNT_ID` | Instagram account ID (optional) |
+
+3. Enable GitHub Actions — pipeline runs automatically at 7AM + 7PM IST
+
+---
+
+## 🧪 Running Tests
+
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Set your Gemini key temporarily
-set GEMINI_API_KEY=your_key_here   # Windows
-export GEMINI_API_KEY=your_key_here  # Mac/Linux
-
-# Run pipeline once locally — browser will open for Google login
-python pipeline.py
-```
-- Browser opens → Sign in with your YouTube channel Google account → Allow
-- This creates `buzzBits_output/yt_token.pickle`
-
-**D. Convert token to base64 for GitHub:**
-```powershell
-# Windows PowerShell:
-$bytes = [System.IO.File]::ReadAllBytes("buzzBits_output\yt_token.pickle")
-[System.Convert]::ToBase64String($bytes) | Set-Clipboard
-# Token is now in your clipboard
-```
-```bash
-# Mac/Linux:
-base64 -w 0 buzzBits_output/yt_token.pickle | pbcopy
+pip install pytest
+pytest tests/ -v
 ```
 
 ---
 
-### 3. Set Up Instagram API
+## 📊 Output Stats
 
-1. You need: **Facebook Business Account** + **Instagram Professional account**
-2. Go to **https://developers.facebook.com** → **My Apps** → **Create App**
-3. Select **Business** type → Continue
-4. Add product: **Instagram Graph API**
-5. Go to **Tools** → **Graph API Explorer**
-6. Generate a **Page Access Token** with these permissions:
-   - `instagram_basic`
-   - `instagram_content_publish`
-   - `pages_read_engagement`
-7. Convert to **long-lived token** (valid 60 days):
-   ```
-   GET https://graph.facebook.com/v18.0/oauth/access_token
-     ?grant_type=fb_exchange_token
-     &client_id=YOUR_APP_ID
-     &client_secret=YOUR_APP_SECRET
-     &fb_exchange_token=YOUR_SHORT_TOKEN
-   ```
-8. Find your **Instagram Business Account ID**:
-   - Go to Meta Business Suite → Settings → Instagram accounts → copy the numeric ID
+- **6 videos/day** (3 per run × 2 runs)
+- **~32 seconds** per video
+- **1080×1920px** (9:16 vertical)
+- **Bilingual** — 4 EN + 2 HI per day
 
 ---
 
-### 4. Create GitHub Repository
+## 🛠️ Tech Stack
 
-1. Go to **https://github.com/new**
-2. Name: `buzzBits` | Type: **Private** | Click **Create repository**
-3. Upload all these files to the repo:
-   ```
-   buzzBits/
-   ├── pipeline.py
-   ├── requirements.txt
-   ├── README.md
-   └── .github/
-       └── workflows/
-           └── buzzBits_daily.yml
-   ```
+| Layer | Technology |
+|-------|------------|
+| Script AI | Google Gemini 2.5 Flash |
+| Voice AI | Microsoft Edge TTS (Neural) |
+| Video | Pexels HD Stock API |
+| Assembly | FFmpeg |
+| Upload | YouTube Data API v3, Instagram Graph API |
+| CI/CD | GitHub Actions |
+| Auth | Google OAuth 2.0 |
 
 ---
 
-### 5. Add GitHub Secrets
+## 📁 Project Structure
 
-Go to your repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-Add each of these:
-
-| Secret Name | Where to Get It | Example |
-|-------------|----------------|---------|
-| `GEMINI_API_KEY` | aistudio.google.com | `AIzaSy...` |
-| `YOUTUBE_CLIENT_SECRETS` | Contents of `youtube_secrets.json` (paste entire JSON) | `{"installed":{"client_id":...}}` |
-| `YOUTUBE_TOKEN_B64` | Base64 output from Step 2D | `gASV...` |
-| `INSTAGRAM_TOKEN` | From Step 3 | `EAABwz...` |
-| `INSTAGRAM_ACCOUNT_ID` | From Step 3 | `17841...` |
-
----
-
-### 6. Enable GitHub Actions
-
-1. Go to your repo → **Actions** tab
-2. Click **"I understand my workflows, go ahead and enable them"**
-3. Done! Pipeline will now run automatically at scheduled times.
-
----
-
-## Test It Manually
-
-1. Go to **Actions** tab in your GitHub repo
-2. Click **"BuzzBits Daily Pipeline"** in the left sidebar
-3. Click **"Run workflow"** → **"Run workflow"**
-4. Watch it run (takes ~45-60 minutes for 3 videos)
-5. Check the **Artifacts** section to download generated videos
-
----
-
-## Customise Your Content
-
-Edit `pipeline.py` to change:
-
-```python
-# Change upload times (UTC):
-# 7AM IST  = 01:30 UTC
-# 12PM IST = 06:30 UTC
-# 6PM IST  = 12:30 UTC
-# 10PM IST = 16:30 UTC
-
-# Change niches:
-NICHES = [
-    {"name": "horror_facts", ...},
-    {"name": "comedy_facts", ...},
-    {"name": "ai_tech", ...},
-    # Add more niches here!
-]
-
-# Change videos per run:
-VIDEOS_PER_RUN = 3  # 3 × 4 runs = 12/day
+```
+freakybits/
+├── pipeline.py              # Main automation pipeline
+├── requirements.txt         # Python dependencies
+├── tests/
+│   └── test_pipeline.py     # Unit tests (pytest)
+├── buzzBits_output/         # Generated videos (gitignored)
+│   ├── analytics.json       # Upload history
+│   └── used_topics.json     # Topic deduplication store
+└── .github/
+    └── workflows/
+        └── buzzBits_daily.yml  # Cron schedule
 ```
 
 ---
 
-## Troubleshooting
+## 🔮 Roadmap
 
-| Problem | Fix |
-|---------|-----|
-| `GEMINI_API_KEY not set` | Add the secret in GitHub Settings |
-| `Veo timed out` | Retry — Veo can be slow during peak hours |
-| `YouTube token expired` | Re-run locally to refresh, update `YOUTUBE_TOKEN_B64` secret |
-| `Instagram container error` | Check your access token hasn't expired (renew every 60 days) |
-| `FFmpeg not found` | GitHub Actions installs it automatically — only needed locally |
-| `Video under 12 seconds` | Veo scene failed — check quota and retry |
+- [ ] Oracle Cloud VM migration (unlimited runs)
+- [ ] Gemini Vision clip relevance scoring
+- [ ] Google Sheets analytics dashboard
+- [ ] Instagram token integration
+- [ ] Fine-tuned topic model per niche
 
 ---
 
-## Free Quota Summary
+## 👨‍💻 Built By
 
-| Service | Free Limit | Your Daily Need |
-|---------|-----------|----------------|
-| Gemini 2.5 Flash | 1000 req/day | ~36 req/day (3 req × 12 videos) |
-| Veo 3.1 Fast | Gemini Pro credits | 24 scenes/day (2 × 12 videos) |
-| gTTS | Unlimited | 12 req/day |
-| YouTube Data API | 10,000 units/day | ~19,200 units/day ⚠️ |
-| Instagram Graph API | Unlimited | 12 req/day |
-| GitHub Actions | 2,000 min/month | ~1,440 min/month |
+**Mohammad Sahil Vahora** — ECE Final Year, Parul University 2026
+- GitHub: [@imsv1301](https://github.com/imsv1301)
+- Instagram: [@freaky_bits](https://instagram.com/freaky_bits)
 
-> ⚠️ **YouTube API Note:** 1 upload = ~1,600 units. 12 uploads = 19,200 units/day which exceeds
-> the free 10,000 unit limit. You'll need to apply for a **YouTube API quota increase** 
-> (free, takes 1-3 days): https://console.cloud.google.com → YouTube Data API → Quotas → Request increase
+---
+
+*This project demonstrates end-to-end AI pipeline engineering — from LLM prompting to cloud deployment — built entirely for free using open APIs and GitHub Actions.*
