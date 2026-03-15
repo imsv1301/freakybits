@@ -1,22 +1,21 @@
-name: BuzzBits Daily Pipeline
+name: FreakyBits Daily Pipeline
 
 on:
   schedule:
-    - cron: '30 1  * * *'   # 7:00 AM  IST
-    - cron: '30 6  * * *'   # 12:00 PM IST
-    - cron: '30 12 * * *'   # 6:00 PM  IST
-    - cron: '30 16 * * *'   # 10:00 PM IST
+    - cron: '30 1  * * *'   # 7:00 AM  IST — Morning batch
+    - cron: '30 13 * * *'   # 7:00 PM  IST — Evening batch
+
   workflow_dispatch:
     inputs:
       force_niche:
-        description: 'Force a specific niche (horror_facts / comedy_facts / ai_tech)'
+        description: 'Force niche (horror_facts / comedy_facts / ai_tech / storytelling)'
         required: false
         default: ''
 
 jobs:
-  buzzBits-run:
+  freakyBits-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
 
     steps:
       - name: 📥 Checkout repository
@@ -36,33 +35,29 @@ jobs:
       - name: 📦 Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: 🎬 Install FFmpeg
+      - name: 🎬 Install FFmpeg + fonts
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg fonts-liberation fonts-open-sans
           ffmpeg -version | head -1
 
       - name: 📁 Create output directory
         run: mkdir -p buzzBits_output
 
       - name: 🔑 Write YouTube client secrets
-        run: |
-          echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > youtube_secrets.json
+        run: echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > youtube_secrets.json
 
       - name: 🔑 Restore YouTube OAuth token
         run: |
           if [ -n "${{ secrets.YOUTUBE_TOKEN_B64 }}" ]; then
             echo '${{ secrets.YOUTUBE_TOKEN_B64 }}' | base64 -d > buzzBits_output/yt_token.pickle
             echo "✅ YouTube token restored"
-          else
-            echo "⚠️ No YouTube token found"
           fi
 
       - name: 📂 Restore Part 1 topic
         run: |
           if [ -n "${{ secrets.PART1_TOPIC_JSON }}" ]; then
             echo '${{ secrets.PART1_TOPIC_JSON }}' > buzzBits_output/part1_topic.json
-            echo "✅ Part 1 topic restored"
           fi
 
       - name: 🚀 Run FreakyBits Pipeline
@@ -78,33 +73,31 @@ jobs:
         if: always()
         run: |
           if [ -f buzzBits_output/yt_token.pickle ]; then
-            TOKEN_B64=$(base64 -w 0 buzzBits_output/yt_token.pickle)
-            echo "YOUTUBE_TOKEN_B64=$TOKEN_B64" >> $GITHUB_ENV
-            echo "✅ Token ready"
+            echo "TOKEN_B64=$(base64 -w 0 buzzBits_output/yt_token.pickle)" >> $GITHUB_ENV
+            echo "✅ Token saved"
           fi
 
-      - name: 💾 Save Part 1 topic for next run
+      - name: 💾 Save Part 1 topic
         if: always()
         run: |
           if [ -f buzzBits_output/part1_topic.json ]; then
-            PART1=$(cat buzzBits_output/part1_topic.json)
-            echo "Part 1 topic: $PART1"
-            echo "⚠️ Update GitHub Secret PART1_TOPIC_JSON with above JSON"
+            echo "Part 1: $(cat buzzBits_output/part1_topic.json)"
+            echo "⚠️ Update PART1_TOPIC_JSON secret with above JSON"
           fi
 
       - name: 📤 Upload video artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: freakyBits-videos-run-${{ github.run_number }}
+          name: freakyBits-run-${{ github.run_number }}
           path: |
             buzzBits_output/*.mp4
             buzzBits_output/*.json
-          retention-days: 3
+          retention-days: 7
 
-      - name: 📋 Show run summary
+      - name: 📋 Summary
         if: always()
         run: |
-          echo "## FreakyBits Run Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "## FreakyBits Run #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Time:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Videos:** 3 per run × 2 runs/day = 6/day" >> $GITHUB_STEP_SUMMARY
