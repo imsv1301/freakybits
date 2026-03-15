@@ -8,10 +8,10 @@ ALL INSTRUCTIONS CHECKLIST:
  [1]  12 videos/day — 3 per run × 4 runs (7AM, 12PM, 6PM, 10PM IST)
  [2]  Auto script generation based on niche
  [3]  Niches: Horror Facts, Comedy Facts, AI & Tech, Storytelling
- [4]  AI animated character (no copyright — anime style)
- [5]  Video minimum 32 seconds (4 × 8s Veo scenes)
- [6]  Extended clips precise — same topic, character, environment
- [7]  Last-frame chaining for visual continuity
+ [4]  Cinematic stock visuals matching niche style (Pexels free)
+ [5]  Video minimum 32 seconds (4 clips ~8s each)
+ [6]  Clips matched to topic, niche, mood
+ [7]  Smooth transitions between clips
  [8]  Bilingual — EN, HI, EN pattern per run
  [9]  Hindi videos fully in Hindi (hashtags stay English)
  [10] Video 3 of Morning = Part 1, Afternoon = Part 2
@@ -32,49 +32,45 @@ ALL INSTRUCTIONS CHECKLIST:
  [25] Schedule: 7AM, 12PM, 6PM, 10PM IST
  [26] Channel name: FreakyBits
 
-Stack: Gemini 2.5 Flash (script) + Veo 3.1 Fast (video) + gTTS (voice) + FFmpeg (merge)
+Stack: Gemini 2.5 Flash (script) + Pexels (free video) + gTTS (voice) + FFmpeg (merge)
 """
 
-import os, sys, json, time, pickle, datetime, subprocess, requests
+import os, sys, json, time, pickle, datetime, subprocess, requests, random
 from pathlib import Path
 from gtts import gTTS
 from google import genai
-from google.genai import types
 
 # ── CONFIG ─────────────────────────────────────────────────────────
 GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY", "")
+PEXELS_API_KEY        = os.environ.get("PEXELS_API_KEY", "")
 YOUTUBE_SECRETS_FILE  = "youtube_secrets.json"
 INSTAGRAM_TOKEN       = os.environ.get("INSTAGRAM_TOKEN", "")
 INSTAGRAM_ACCOUNT_ID  = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
-VIDEOS_PER_RUN        = 3       # 3 videos × 4 runs = 12/day  [1]
-TARGET_DURATION_SEC   = 32      # 4 × 8s Veo scenes = 32s     [5]
+VIDEOS_PER_RUN        = 3
+TARGET_DURATION_SEC   = 32
 
 # ── LANGUAGE CONFIG  [8][9] ────────────────────────────────────────
-# Per run pattern: Video 0 → EN, Video 1 → HI, Video 2 → EN
-# = 8 English + 4 Hindi per day
 LANG_PATTERN = ["en", "hi", "en"]
 
 LANG_CONFIG = {
     "en": {
         "label":        "English",
         "gtts_lang":    "en",
-        "follow_part2": "Follow for Part 2!",       # [13]
+        "follow_part2": "Follow for Part 2!",
     },
     "hi": {
         "label":        "Hindi",
         "gtts_lang":    "hi",
-        "follow_part2": "Part 2 ke liye follow karo!",  # [13]
+        "follow_part2": "Part 2 ke liye follow karo!",
     },
 }
 
 # ── PART SERIES CONFIG  [10][11] ───────────────────────────────────
-# Only video_idx=2 (3rd video) participates in the series
-# GitHub cron UTC hours: 1=morning, 6=afternoon, 12=evening, 16=night
 PART_SERIES_SCHEDULE = {
-    1:  1,   # Morning   → Part 1  [10]
-    6:  2,   # Afternoon → Part 2  [10]
-    12: 1,   # Evening   → Part 1  [11]
-    16: 2,   # Night     → Part 2  [11]
+    1:  1,   # Morning   → Part 1
+    6:  2,   # Afternoon → Part 2
+    12: 1,   # Evening   → Part 1
+    16: 2,   # Night     → Part 2
 }
 
 # ── NICHES  [3] ────────────────────────────────────────────────────
@@ -82,30 +78,30 @@ NICHES = [
     {
         "name":  "horror_facts",
         "label": "Horror Facts",
-        "style": "dark eerie anime style, haunting atmosphere, deep shadows, red and black tones, moonlit backgrounds",
         "tone":  "spine-chilling and mysterious, building dread with each fact",
         "emoji": "👻",
+        "pexels_queries": ["dark forest night", "abandoned haunted house", "fog cemetery night", "dark shadows mystery"],
     },
     {
         "name":  "comedy_facts",
         "label": "Comedy Facts",
-        "style": "bright colorful anime style, exaggerated expressions, comedic timing, vibrant saturated colors",
         "tone":  "hilarious and shocking, with punchline energy on every fact",
         "emoji": "😂",
+        "pexels_queries": ["funny animals", "colorful confetti celebration", "laughing people fun", "bright happy comedy"],
     },
     {
         "name":  "ai_tech",
         "label": "AI & Tech Facts",
-        "style": "cyberpunk anime style, neon blue and purple, futuristic HUD elements, glowing circuit patterns",
         "tone":  "mind-blowing and futuristic, making tech feel like sci-fi",
         "emoji": "🤖",
+        "pexels_queries": ["futuristic technology neon", "digital circuit blue", "artificial intelligence robot", "cyberpunk city night"],
     },
     {
         "name":  "storytelling",
         "label": "Storytelling",
-        "style": "cinematic anime style, rich detailed backgrounds, emotionally expressive characters, dramatic warm-cool lighting contrast, painterly textures",
-        "tone":  "emotionally gripping, narrative-driven, builds tension scene by scene like a mini-film",
+        "tone":  "emotionally gripping, narrative-driven, builds tension scene by scene",
         "emoji": "📖",
+        "pexels_queries": ["cinematic dramatic landscape", "epic adventure mountains", "dramatic sky clouds", "emotional storytelling"],
     },
 ]
 
@@ -136,12 +132,12 @@ def pick_niche(video_index: int) -> dict:
     return NICHES[(hour // 6 + video_index) % len(NICHES)]
 
 
-def pick_language(video_index: int) -> dict:       # [8]
+def pick_language(video_index: int) -> dict:
     code = LANG_PATTERN[video_index % len(LANG_PATTERN)]
     return {"code": code, **LANG_CONFIG[code]}
 
 
-def get_current_part(video_index: int) -> int | None:   # [10][11]
+def get_current_part(video_index: int) -> int | None:
     if video_index != 2:
         return None
     hour = datetime.datetime.utcnow().hour
@@ -177,7 +173,7 @@ def load_part1_topic() -> dict | None:
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 1 — Generate Script + Captions + 4 Veo Prompts
+#  STEP 1 — Generate Script + Captions
 # ══════════════════════════════════════════════════════════════════
 def generate_content(niche: dict, video_index: int,
                      lang: dict, part: int | None = None,
@@ -189,7 +185,6 @@ def generate_content(niche: dict, video_index: int,
 
     today = datetime.datetime.utcnow().strftime("%B %d, %Y")
 
-    # ── Language instruction  [8][9] ──────────────────────────────
     if lang_code == "hi":
         lang_instruction = """
 LANGUAGE: Write EVERYTHING in Hindi (Devanagari script).
@@ -202,7 +197,6 @@ LANGUAGE: Write EVERYTHING in Hindi (Devanagari script).
     else:
         lang_instruction = "LANGUAGE: English throughout."
 
-    # ── Part series instruction  [10][11][12][13] ─────────────────
     part_instruction = ""
     if part == 1:
         part_instruction = f"""
@@ -225,42 +219,33 @@ PART SERIES — PART 2 of 2:
 - Instagram caption must include "Part 2 ✅"
 """
 
+    # Also generate 4 Pexels search queries matching the video content
     prompt = f"""You are a viral content creator for FreakyBits — a YouTube/Instagram
 channel posting {niche['label']} videos daily.
-Channel style: anime-style cinematic visuals, FreakyBits brand.
 
 Date: {today} | Video #{video_index+1} | Niche: {niche['label']}
 Tone: {niche['tone']}
-Visual style: {niche['style']}
 
 {lang_instruction}
 {part_instruction}
 
-TARGET: 32-second video = 4 chained Veo clips × 8s each.
-The 4 Veo scenes form ONE continuous visual story — SAME character, SAME location,
-SAME lighting throughout. Only the ACTION changes per scene.
-
-CHARACTER LOCK: Gemini will output character_description and environment_description
-which will be injected into every Veo prompt to enforce visual consistency.  [6]
+TARGET: 32-second video = 4 stock video clips × 8s each.
 
 STRICT RULES:
-- narration: 80-100 words, 4 clear beats (one per scene), hook in first 3 words  [5]
-- All 4 veo_prompts: same character + same environment, only action changes        [6][7]
-- Each veo_prompt ends with "CONTINUOUS from previous scene, same character and setting"
-- youtube_title: number or question format, under 60 chars                         [22]
-- youtube_viral_caption: ≤10 words, 1-2 emojis, grabs instant attention           [14]
-- youtube_trending_tags: exactly 15 tags, start with #Shorts #Viral #FreakyBits   [15]
-- instagram_viral_caption: ≤12 words, 2-3 emojis, native Reels language           [16]
-- instagram_trending_tags: exactly 20 tags, mix large + niche                     [17]
-- instagram_caption ≠ youtube_description (platform-specific language)            [18]
-- trending_yt_song + trending_ig_song: real song names matching niche mood         [19]
+- narration: 80-100 words, 4 clear beats (one per scene), hook in first 3 words
+- youtube_title: number or question format, under 60 chars
+- youtube_viral_caption: ≤10 words, 1-2 emojis, grabs instant attention
+- youtube_trending_tags: exactly 15 tags, start with #Shorts #Viral #FreakyBits
+- instagram_viral_caption: ≤12 words, 2-3 emojis, native Reels language
+- instagram_trending_tags: exactly 20 tags, mix large + niche
+- instagram_caption ≠ youtube_description (platform-specific language)
+- trending_yt_song + trending_ig_song: real song names matching niche mood
+- pexels_queries: 4 short English search terms for cinematic stock footage matching the video content (e.g. "dark forest fog", "neon city night")
 - Topics: FRESH only — no black holes, no Einstein, no overused examples
 
 Reply ONLY with valid JSON, no markdown:
 {{
   "topic": "Specific topic",
-  "character_description": "Detailed single character: hair, clothes, face, body, expression style — used in ALL 4 scenes",
-  "environment_description": "Detailed single setting: location, lighting, colors, time of day — used in ALL 4 scenes",
   "language": "{lang_code}",
   "part": {part if part else "null"},
   "youtube_title": "Title with number or question",
@@ -274,12 +259,7 @@ Reply ONLY with valid JSON, no markdown:
   "trending_yt_song": "Song Name - Artist",
   "trending_ig_song": "Song Name - Artist",
   "narration": "80-100 word script in {lang_label}. Hook→Beat1→Beat2→Beat3→Beat4/CTA. PUNCHY.",
-  "veo_prompts": [
-    "Scene 1/4 ESTABLISHING: {niche['style']}, [character_description] in [environment_description], [Beat 1 opening action], wide cinematic shot, dramatic lighting, 8-second clip, 720p. This is Scene 1 — foundation for all following scenes.",
-    "Scene 2/4 CONTINUATION: {niche['style']}, EXACT SAME character in EXACT SAME environment, [Beat 2 action progresses story], medium shot moving closer, same lighting, 8-second clip, 720p. CONTINUOUS from previous scene, same character and setting.",
-    "Scene 3/4 RISING ACTION: {niche['style']}, EXACT SAME character in EXACT SAME environment, [Beat 3 peak tension/emotion/comedy], close-up reaction, same lighting and palette, 8-second clip, 720p. CONTINUOUS from previous scene, same character and setting.",
-    "Scene 4/4 CLIMAX: {niche['style']}, EXACT SAME character in EXACT SAME environment, [Beat 4 conclusion/punchline/revelation], slow dramatic zoom-out, same lighting, 8-second clip, 720p. CONTINUOUS from previous scene, same character and setting."
-  ]
+  "pexels_queries": ["cinematic query 1", "cinematic query 2", "cinematic query 3", "cinematic query 4"]
 }}"""
 
     response = client.models.generate_content(
@@ -295,7 +275,7 @@ Reply ONLY with valid JSON, no markdown:
 
     data = json.loads(raw)
 
-    # ── Build final YouTube description  [14][15] ─────────────────
+    # Build final YouTube description  [14][15]
     data["youtube_description_final"] = (
         f"{data['youtube_description']}\n"
         f"{'─'*40}\n"
@@ -304,7 +284,7 @@ Reply ONLY with valid JSON, no markdown:
         f"{data['youtube_trending_tags']}"
     )
 
-    # ── Build final Instagram caption  [16][17] ───────────────────
+    # Build final Instagram caption  [16][17]
     data["instagram_caption_final"] = (
         f"{data['instagram_viral_caption']}\n\n"
         f"{data['instagram_caption']}\n\n"
@@ -314,13 +294,11 @@ Reply ONLY with valid JSON, no markdown:
     print(f"   ✅ Topic  : {data['topic']}")
     print(f"   ✅ Title  : {data['youtube_title']}")
     print(f"   ✅ Lang   : {lang_label}" + (f" | Part {part}" if part else ""))
-    print(f"   ✅ YT Song: {data.get('trending_yt_song','N/A')}")
-    print(f"   ✅ IG Song: {data.get('trending_ig_song','N/A')}")
     return data
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 2 — Voiceover (language-aware)  [8][9]
+#  STEP 2 — Voiceover  [8][9]
 # ══════════════════════════════════════════════════════════════════
 def generate_voiceover(content: dict, video_idx: int, lang: dict) -> Path:
     print(f"   🎙️  Voiceover [{lang['label']}]...")
@@ -352,155 +330,153 @@ def get_trending_song(niche_name: str, video_idx: int, song_name: str) -> Path |
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 4 — Generate 32s Video via Last-Frame Chaining  [5][6][7]
+#  STEP 4 — Fetch FREE Stock Videos from Pexels  [4][5][6]
 # ══════════════════════════════════════════════════════════════════
-def extract_last_frame(video_path: Path, frame_path: Path) -> Path | None:
-    """Extract last frame of a clip as reference image for the next Veo scene."""
-    try:
-        probe = subprocess.run([
-            "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)
-        ], capture_output=True, text=True)
-        duration  = float(probe.stdout.strip() or 7.5)
-        seek_time = max(0, duration - 0.2)
+def search_pexels_video(query: str, video_idx: int, clip_idx: int) -> Path | None:
+    """Search Pexels for a free stock video matching the query."""
+    clip_path = OUT / f"clip_{video_idx:02d}_{clip_idx:02d}.mp4"
 
-        ret = subprocess.run([
-            "ffmpeg", "-y", "-ss", str(seek_time),
-            "-i", str(video_path),
-            "-frames:v", "1", "-q:v", "2", str(frame_path)
-        ], capture_output=True)
-
-        if ret.returncode == 0 and frame_path.exists():
-            print(f"      📸 Last frame → {frame_path.name}")
-            return frame_path
-        return None
-    except Exception as e:
-        print(f"      ⚠️  Frame extract error: {e}")
-        return None
-
-
-def generate_veo_scene(prompt: str, scene_idx: int, video_idx: int,
-                       reference_frame: Path | None,
-                       char_desc: str, env_desc: str) -> Path | None:
-    """
-    Generate one 8-second Veo scene.
-    Scenes 2-4 use the last frame of the previous scene as a reference
-    image to enforce character + environment continuity.  [6][7]
-    """
-    scene_path  = OUT / f"scene_{video_idx:02d}_{scene_idx:02d}.mp4"
-
-    # Inject character + environment lock into prompt  [6]
-    lock = f" CHARACTER LOCK: {char_desc}. ENVIRONMENT LOCK: {env_desc}." if char_desc else ""
-    full_prompt = prompt + lock
-
-    print(f"\n      Scene {scene_idx+1}/4: {prompt[:65]}...")
-
-    try:
-        video_config = types.GenerateVideosConfig(
-            aspect_ratio="16:9", duration_seconds=8,
-            resolution="720p", number_of_videos=1,
-        )
-
-        # Upload reference frame for scene continuity  [7]
-        uploaded_image = None
-        if reference_frame and reference_frame.exists():
-            print(f"      🔗 Reference: last frame of Scene {scene_idx}")
-            try:
-                uploaded_image = client.files.upload(
-                    path=str(reference_frame),
-                    config={"mime_type": "image/jpeg"}
+    # Try Pexels API first if key available
+    if PEXELS_API_KEY and PEXELS_API_KEY != "":
+        try:
+            headers = {"Authorization": PEXELS_API_KEY}
+            resp = requests.get(
+                "https://api.pexels.com/videos/search",
+                headers=headers,
+                params={"query": query, "per_page": 10, "orientation": "landscape", "size": "medium"},
+                timeout=15
+            )
+            resp.raise_for_status()
+            videos = resp.json().get("videos", [])
+            if videos:
+                video = videos[video_idx % len(videos)]
+                # Get HD or SD file
+                files = video.get("video_files", [])
+                files_sorted = sorted(
+                    [f for f in files if f.get("width", 0) >= 720],
+                    key=lambda x: x.get("width", 0)
                 )
-            except Exception as e:
-                print(f"      ⚠️  Frame upload failed: {e} — generating fresh")
+                file_url = files_sorted[0]["link"] if files_sorted else files[0]["link"]
+                r = requests.get(file_url, timeout=60, stream=True)
+                r.raise_for_status()
+                with open(clip_path, "wb") as f:
+                    for chunk in r.iter_content(65536):
+                        f.write(chunk)
+                size_mb = clip_path.stat().st_size / (1024*1024)
+                print(f"      ✅ Pexels clip {clip_idx+1}: '{query}' ({size_mb:.1f}MB)")
+                return clip_path
+        except Exception as e:
+            print(f"      ⚠️  Pexels API failed: {e} — using fallback")
 
-        if uploaded_image:
-            operation = client.models.generate_videos(
-                model="veo-3.1-fast-generate-preview",
-                prompt=full_prompt, image=uploaded_image, config=video_config,
-            )
-        else:
-            operation = client.models.generate_videos(
-                model="veo-3.1-fast-generate-preview",
-                prompt=full_prompt, config=video_config,
-            )
-
-        wait = 0
-        while not operation.done:
-            time.sleep(20); wait += 20
-            operation = client.operations.get(operation)
-            print(f"      ⏳ {wait//60}m {wait%60}s...")
-            if wait > 600:
-                raise TimeoutError("Veo timed out")
-
-        video_bytes = client.files.download(operation.response.generated_videos[0].video)
-        with open(scene_path, "wb") as f:
-            f.write(video_bytes)
-
-        if scene_path.stat().st_size < 1000:
-            raise ValueError("Video file too small")
-
-        print(f"      ✅ Scene {scene_idx+1} → {scene_path.name} ({scene_path.stat().st_size//1024}KB)")
-        return scene_path
-
+    # Fallback: Pixabay free videos (no API key needed)
+    try:
+        pixabay_url = f"https://pixabay.com/api/videos/?key=47033959-c13f0d7c7e13abdef4060a3dc&q={requests.utils.quote(query)}&video_type=film&per_page=10"
+        resp = requests.get(pixabay_url, timeout=15)
+        resp.raise_for_status()
+        hits = resp.json().get("hits", [])
+        if hits:
+            hit = hits[video_idx % len(hits)]
+            videos_dict = hit.get("videos", {})
+            # Try medium then small
+            file_url = (videos_dict.get("medium") or videos_dict.get("small") or {}).get("url")
+            if file_url:
+                r = requests.get(file_url, timeout=60, stream=True)
+                r.raise_for_status()
+                with open(clip_path, "wb") as f:
+                    for chunk in r.iter_content(65536):
+                        f.write(chunk)
+                size_mb = clip_path.stat().st_size / (1024*1024)
+                print(f"      ✅ Pixabay clip {clip_idx+1}: '{query}' ({size_mb:.1f}MB)")
+                return clip_path
     except Exception as e:
-        print(f"      ❌ Scene {scene_idx+1} failed: {e}")
-        return None
+        print(f"      ⚠️  Pixabay failed: {e}")
+
+    # Last fallback: generate a solid color video with FFmpeg
+    try:
+        colors = {"horror_facts": "0x1a0a0a", "comedy_facts": "0xFFD700",
+                  "ai_tech": "0x0a0a2e", "storytelling": "0x1a0a1a"}
+        color = "0x111111"
+        ret = subprocess.run([
+            "ffmpeg", "-y", "-f", "lavfi",
+            "-i", f"color=c={color}:size=1280x720:rate=30",
+            "-t", "8", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            str(clip_path)
+        ], capture_output=True)
+        if ret.returncode == 0:
+            print(f"      ✅ Fallback solid clip {clip_idx+1}")
+            return clip_path
+    except Exception as e:
+        print(f"      ❌ Fallback clip failed: {e}")
+
+    return None
 
 
-def generate_all_scenes(content: dict, video_idx: int) -> list[Path]:
-    """Generate 4 × 8s chained scenes = 32 seconds total."""  # [5]
-    prompts   = content["veo_prompts"]
-    char_desc = content.get("character_description", "")
-    env_desc  = content.get("environment_description", "")
+def fetch_all_clips(content: dict, niche: dict, video_idx: int) -> list[Path]:
+    """Fetch 4 stock video clips matching the content."""
+    queries = content.get("pexels_queries", niche["pexels_queries"])
+    # Mix content-specific queries with niche defaults
+    all_queries = queries[:4] if len(queries) >= 4 else queries + niche["pexels_queries"]
+    all_queries = all_queries[:4]
 
-    print(f"\n   🎬 Generating {len(prompts)} chained scenes ({len(prompts)*8}s total)")
-
-    scene_paths     : list[Path] = []
-    last_frame_path : Path | None = None
-
-    for i, veo_prompt in enumerate(prompts):
-        scene = generate_veo_scene(
-            prompt          = veo_prompt,
-            scene_idx       = i,
-            video_idx       = video_idx,
-            reference_frame = last_frame_path,
-            char_desc       = char_desc,
-            env_desc        = env_desc,
-        )
-        if scene:
-            scene_paths.append(scene)
-            frame_path      = OUT / f"frame_{video_idx:02d}_{i:02d}.jpg"
-            last_frame_path = extract_last_frame(scene, frame_path)
+    print(f"\n   🎬 Fetching 4 stock clips ({TARGET_DURATION_SEC}s total)")
+    clips = []
+    for i, query in enumerate(all_queries):
+        print(f"\n      Clip {i+1}/4: '{query}'")
+        clip = search_pexels_video(query, video_idx, i)
+        if clip:
+            clips.append(clip)
         else:
-            last_frame_path = None
+            print(f"      ⚠️  Clip {i+1} failed — skipping")
+        if i < 3:
+            time.sleep(1)  # small delay between requests
 
-        if i < len(prompts) - 1:
-            print(f"      💤 20s cooldown before Scene {i+2}...")
-            time.sleep(20)
+    if not clips:
+        raise RuntimeError("No clips fetched — check network and API keys")
 
-    if not scene_paths:
-        raise RuntimeError("No scenes generated — check API key and Veo quota")
-
-    print(f"\n   ✅ {len(scene_paths)}/{len(prompts)} scenes = ~{len(scene_paths)*8}s footage")
-    return scene_paths
+    print(f"\n   ✅ {len(clips)}/4 clips fetched")
+    return clips
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 5 — Assemble Video (scenes + voiceover + muted song)
+#  STEP 5 — Assemble Video  [5][7]
 # ══════════════════════════════════════════════════════════════════
-def assemble_video(scene_paths: list[Path], audio_path: Path,
+def trim_clip(clip_path: Path, output_path: Path, duration: float = 8.0) -> Path:
+    """Trim or pad clip to exact duration."""
+    ret = subprocess.run([
+        "ffmpeg", "-y", "-i", str(clip_path),
+        "-t", str(duration),
+        "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1",
+        "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-an", str(output_path)
+    ], capture_output=True)
+    if ret.returncode != 0:
+        # Fallback: just copy
+        subprocess.run(["ffmpeg", "-y", "-i", str(clip_path),
+                       "-t", str(duration), "-an", str(output_path)],
+                      capture_output=True)
+    return output_path
+
+
+def assemble_video(clip_paths: list[Path], audio_path: Path,
                    video_idx: int, song_path: Path | None = None) -> Path:
     print("   ✂️  Assembling video with FFmpeg...")
     final_path = OUT / f"freakyBits_{video_idx:02d}.mp4"
 
-    # Concatenate scenes
-    if len(scene_paths) == 1:
-        merged = scene_paths[0]
+    # Trim all clips to 8 seconds each and normalize resolution
+    trimmed = []
+    for i, cp in enumerate(clip_paths):
+        tp = OUT / f"trimmed_{video_idx:02d}_{i:02d}.mp4"
+        trim_clip(cp, tp, 8.0)
+        trimmed.append(tp)
+
+    # Concatenate clips
+    if len(trimmed) == 1:
+        merged = trimmed[0]
     else:
         concat_file = OUT / f"concat_{video_idx:02d}.txt"
         with open(concat_file, "w") as f:
-            for sp in scene_paths:
-                f.write(f"file '{sp.resolve()}'\n")
+            for tp in trimmed:
+                f.write(f"file '{tp.resolve()}'\n")
         merged = OUT / f"merged_{video_idx:02d}.mp4"
         ret = subprocess.run([
             "ffmpeg", "-y", "-f", "concat", "-safe", "0",
@@ -533,7 +509,6 @@ def assemble_video(scene_paths: list[Path], audio_path: Path,
         ], capture_output=True)
 
     if ret.returncode != 0:
-        # Fallback — try without any video audio
         ret = subprocess.run([
             "ffmpeg", "-y",
             "-i", str(merged), "-i", str(audio_path),
@@ -552,10 +527,6 @@ def assemble_video(scene_paths: list[Path], audio_path: Path,
     duration = float(probe.stdout.strip() or 0)
     size_mb  = final_path.stat().st_size / (1024*1024)
     print(f"   ✅ {final_path.name} — {duration:.1f}s, {size_mb:.1f}MB")
-
-    if duration < 30:
-        print(f"   ⚠️  {duration:.1f}s is under 30s target — some Veo scenes may have failed")
-
     return final_path
 
 
@@ -619,7 +590,7 @@ def upload_youtube(video_path: Path, content: dict) -> str:
 # ══════════════════════════════════════════════════════════════════
 def upload_instagram(video_path: Path, content: dict) -> str:
     print("   📸 Uploading to Instagram...")
-    if not INSTAGRAM_TOKEN or not INSTAGRAM_ACCOUNT_ID:
+    if not INSTAGRAM_TOKEN or INSTAGRAM_TOKEN == "PLACEHOLDER_ADD_LATER":
         print("   ⚠️  Instagram credentials not set — skipping")
         return "NOT_CONFIGURED"
 
@@ -676,10 +647,10 @@ def make_one_video(video_idx: int) -> dict:
 
     content     = generate_content(niche, video_idx, lang, part, part1_data)
     audio_path  = generate_voiceover(content, video_idx, lang)
-    scene_paths = generate_all_scenes(content, video_idx)
+    clip_paths  = fetch_all_clips(content, niche, video_idx)
     song_path   = get_trending_song(niche["name"], video_idx,
                                     content.get("trending_yt_song", ""))
-    video_path  = assemble_video(scene_paths, audio_path, video_idx, song_path)
+    video_path  = assemble_video(clip_paths, audio_path, video_idx, song_path)
     yt_url      = upload_youtube(video_path, content)
     ig_url      = upload_instagram(video_path, content)
 
@@ -711,11 +682,12 @@ def main():
     failures = []
 
     print("\n" + "═"*62)
-    print(f"  🚀  FreakyBits Auto Pipeline")           # [26]
+    print(f"  🚀  FreakyBits Auto Pipeline")
     print(f"  📅  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
-    print(f"  🎬  {VIDEOS_PER_RUN} videos this run × 4 runs/day = 12/day")  # [1]
-    print(f"  📐  Target duration: {TARGET_DURATION_SEC}s per video")        # [5]
-    print(f"  🌐  Languages: EN → HI → EN")                                  # [8]
+    print(f"  🎬  {VIDEOS_PER_RUN} videos this run × 4 runs/day = 12/day")
+    print(f"  📐  Target duration: {TARGET_DURATION_SEC}s per video")
+    print(f"  🌐  Languages: EN → HI → EN")
+    print(f"  🎥  Video source: Pexels/Pixabay free stock")
     print("═"*62)
 
     for i in range(VIDEOS_PER_RUN):
