@@ -23,7 +23,7 @@ LANG_PATTERN = ["en", "hi", "en"]
 LANG_CONFIG = {
     "en": {
         "label":        "English",
-        "edge_voice":   "en-US-ChristopherNeural",
+        "edge_voice":   "en-US-AndrewNeural",
         "edge_rate":    "+20%",
         "follow_part2": "Follow for Part 2!",
     },
@@ -37,7 +37,7 @@ LANG_CONFIG = {
 
 # Horror story niche uses slower deeper voice
 HORROR_VOICE_OVERRIDE = {
-    "en": {"edge_voice": "en-US-GuyNeural",    "edge_rate": "-10%"},
+    "en": {"edge_voice": "en-US-AndrewNeural", "edge_rate": "-8%"},
     "hi": {"edge_voice": "hi-IN-MadhurNeural", "edge_rate": "-5%"},
 }
 
@@ -266,14 +266,16 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
     if script_style == "story":
         # Horror story — full mini narrative
         narration_instruction = (
-            "HORROR STORY FORMAT:\n"
-            "Write a gripping 45-55 second horror mini-story with this exact structure:\n"
-            "1. HOOK (first 5 words must be terrifying — grab immediately)\n"
-            "2. BUILD (establish setting, creeping dread, sensory details)\n"
-            "3. TWIST (shocking revelation that reframes everything)\n"
-            "4. HAUNTING END (last line lingers in the mind — do NOT resolve fully)\n"
-            "100-120 words. Slow, eerie pacing. Every sentence adds dread.\n"
-            "Write as ONE continuous paragraph. No line breaks. No filler words."
+            "HORROR STORY FORMAT: \n"
+            "Write like you're whispering a true story to someone at 3am. Conversational but eerie.\n"
+            "Structure: \n"
+            "1. HOOK — first 5 words must make skin crawl (not 'Did you know' — start with dread)\n"
+            "2. BUILD — describe the location, the person, what they heard or saw — sensory and specific\n"
+            "3. TWIST — the moment everything changed — delivered calmly which makes it more disturbing\n"
+            "4. END — ONE final sentence that haunts. Unresolved. Lingers. \n"
+            "100-120 words. Use phrases like 'here's what nobody could explain', 'and that's when they noticed'.\n"
+            "Sound like a true crime podcast host — calm, real, terrifying.\n"
+            "ONE continuous paragraph. No line breaks."
         )
         topic_instruction  = "Pick ONE specific real haunted location, true paranormal case, or terrifying urban legend. Be specific — name the place, year, or person."
         tag_extras         = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #CreepyStory #HorrorTok #ghost #haunted #scary"
@@ -283,11 +285,11 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
 
     elif script_style == "dialogue":
         narration_instruction = (
-            "DIALOGUE FORMAT:\n"
-            "Two characters: Alex (excited about AI) and Sam (skeptical, always asks if free).\n"
-            "Format: \"Alex: [line]. Sam: [line]. Alex: [line]. Sam: [line]. Alex: [CTA].\"\n"
-            "80-100 words. Fast, funny, natural conversation about ONE specific AI tool.\n"
-            "Mention the tool name, what it does, and if it's free or paid.\n"
+            "DIALOGUE FORMAT (always English): \n"
+            "Two characters: Alex (hyped about AI) and Sam (skeptical broke guy who always asks if free).\n"
+            "Format: \"Did you know [tool] exists? Alex: bro this AI just [does X]. Sam: wait is it free? "
+            "Alex: [yes/no + detail]. Sam: [reaction]. Alex: Follow FreakyBits for more free AI drops!\"\n"
+            "80-100 words. Sound like two friends texting — casual, punchy, funny.\n"
             "ONE continuous string, no line breaks."
         )
         topic_instruction  = "Pick ONE specific trending AI tool from 2025 or 2026. Be specific — name it, its main use, its price (free/paid)."
@@ -299,8 +301,10 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
     else:
         # Comedy narrator
         narration_instruction = (
-            "ONE continuous paragraph, 80-100 words, ZERO pauses between sentences, "
-            "hook in first 3 words, 4 shocking funny facts, strong CTA at end. No line breaks."
+            "COMEDY FACTS FORMAT: Start with 'Did you know' — then deliver 4 shocking funny facts "
+            "in a conversational tone like you're texting a friend who loves weird trivia. "
+            "Add reactions like 'I know right?', 'wait it gets better', 'no seriously'. "
+            "80-100 words. ONE continuous string. End with 'Follow for more wild facts!'"
         )
         topic_instruction  = "Fresh specific topic — shocking, funny, unbelievable. No overused examples."
         tag_extras         = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
@@ -308,11 +312,9 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
         duration_note      = "32 seconds"
         pexels_hint        = '["colorful confetti explosion", "people laughing outdoors", "bright colorful balloons", "funny animals cute"]'''
 
-    prompt = f"""You are an expert viral content writer for FreakyBits — YouTube/Instagram shorts.
-You study what goes viral and write scripts that KEEP viewers watching to the very last second.
+    prompt = f"""You are a world-class viral short-form video scriptwriter. Your scripts feel like a friend excitedly telling you something insane — not like someone reading off a teleprompter.
 
-Niche: {niche['label']} | Tone: {niche['tone']}
-Date: {today} | Target duration: {duration_note}
+Niche: {niche['label']} | Date: {today} | Duration: {duration_note}
 {lang_instruction}
 {part_instruction}
 {avoid_str}
@@ -320,32 +322,41 @@ Date: {today} | Target duration: {duration_note}
 
 TASK: {topic_instruction}
 
-SCRIPT REQUIREMENTS:
+SCRIPT STYLE — THIS IS CRITICAL:
+Write like you are TALKING to a friend, not reading a script. Use:
+- Short punchy sentences mixed with longer ones
+- Natural pauses implied by punctuation (comma = breath, period = pause)
+- Conversational words: "Okay so", "Here's the thing", "Wait — it gets worse", "And get this"
+- Reactions: "I know, sounds crazy", "No seriously", "That's not even the weirdest part"
+- Never sound robotic. Never list facts dryly.
+
 {narration_instruction}
 
-WRITING RULES (CRITICAL):
-- First 3 words must HOOK immediately — no "Did you know" or "Today we"
-- Every sentence must make the viewer MORE invested, not less
-- Use specific names, dates, places — never vague
-- End must leave viewer wanting more or deeply unsettled
-- Write like a professional screenwriter, not a listicle
+WRITING RULES:
+- Comedy/AI fact videos MUST start with "Did you know" as first words
+- Horror stories start with something that immediately creates dread
+- Every sentence must make viewer MORE curious or MORE scared
+- Use real names, real places, real years — specifics make stories believable
+- End ALWAYS with "Follow for more!" or niche CTA — said naturally, not awkwardly
+- Write the narration as ONE continuous string — no line breaks, no bullet points
+- Sound like MrBeast or Yes Theory narration style — energetic and human
 
 Reply ONLY in valid JSON (no markdown, no extra text):
 {{
   "topic": "specific topic/tool/story name",
   "language": "{lang_code}",
   "part": {part if part else "null"},
-  "youtube_title": "viral title under 60 chars — curiosity gap or shock",
-  "youtube_description": "3 punchy sentences.\\n\\nSubscribe for daily {niche['label']} {niche['emoji']}!\\n\\n",
+  "youtube_title": "viral title under 60 chars — curiosity or shock",
+  "youtube_description": "3 conversational punchy sentences.\\n\\nSubscribe for daily {niche['label']} {niche['emoji']}!\\n\\n",
   "youtube_viral_caption": "hook under 10 words with emoji",
   "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} {tag_extras} #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo",
-  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","mindblown","horror","viral"],
-  "instagram_caption": "punchy IG caption 150 chars max with emojis",
+  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","mindblown","viral","facts"],
+  "instagram_caption": "punchy IG caption 150 chars max with emojis — conversational",
   "instagram_viral_caption": "Reels hook 12 words max 2-3 emojis",
   "instagram_trending_tags": "{ig_tags}",
   "trending_yt_song": "popular song - artist matching niche mood",
   "trending_ig_song": "popular song - artist matching niche mood",
-  "narration": "WRITE THE FULL NARRATION HERE as one continuous string",
+  "narration": "Write the FULL conversational narration here — sounds like talking to a friend, starts with Did you know for facts, energetic and human, no robotic lines",
   "pexels_queries": {pexels_hint}
 }}"""
 
@@ -813,6 +824,9 @@ def upload_instagram(video_path, content):
 def make_one_video(video_idx):
     niche      = pick_niche(video_idx)
     lang       = pick_language(video_idx)
+    # AI Tools Talk is always English — override Hindi slot
+    if niche["name"] == "ai_tools_talk" and lang["code"] == "hi":
+        lang = {"code": "en", **LANG_CONFIG["en"]}
     part       = get_current_part(video_idx)
     part1_data = load_part1_topic() if part == 2 else None
 
