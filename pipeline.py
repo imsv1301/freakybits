@@ -44,44 +44,60 @@ NICHES = [
         "label": "Horror Facts",
         "tone":  "spine-chilling and mysterious, building dread with each fact",
         "emoji": "👻",
-        "color_filter": "curves=all='0/0 100/80 200/160 255/200'",  # dark moody
+        "color_filter": "curves=all='0/0 100/80 200/160 255/200'",
         "pexels_queries": ["dark abandoned building interior", "foggy forest night dark", "dark stormy sky lightning", "mysterious dark corridor"],
+        "script_style": "narrator",
     },
     {
         "name":  "comedy_facts",
         "label": "Comedy Facts",
         "tone":  "hilarious and shocking, punchline energy on every fact",
         "emoji": "😂",
-        "color_filter": "curves=all='0/0 100/110 200/210 255/255'",  # bright vibrant
+        "color_filter": "curves=all='0/0 100/110 200/210 255/255'",
         "pexels_queries": ["colorful confetti explosion", "people laughing fun outdoors", "bright colorful balloons", "funny animals cute"],
+        "script_style": "narrator",
     },
     {
         "name":  "ai_tech",
         "label": "AI & Tech Facts",
         "tone":  "mind-blowing and futuristic, tech feels like sci-fi",
         "emoji": "🤖",
-        "color_filter": "colorchannelmixer=rr=0.5:gg=0.7:bb=1.2",  # blue neon tint
+        "color_filter": "colorchannelmixer=rr=0.5:gg=0.7:bb=1.2",
         "pexels_queries": ["neon city night cyberpunk", "futuristic technology glowing", "digital data server room dark", "circuit board technology blue"],
+        "script_style": "narrator",
     },
     {
         "name":  "storytelling",
         "label": "Storytelling",
         "tone":  "emotionally gripping, narrative-driven, builds tension",
         "emoji": "📖",
-        "color_filter": "curves=all='0/10 100/90 200/185 255/240'",  # cinematic warm
+        "color_filter": "curves=all='0/10 100/90 200/185 255/240'",
         "pexels_queries": ["epic mountain landscape dramatic", "ancient ruins mysterious", "dramatic storm clouds sky", "cinematic desert sunset"],
+        "script_style": "narrator",
+    },
+    # NEW NICHE — AI Tools Talk (two characters discussing trending AI tools)
+    {
+        "name":  "ai_tools_talk",
+        "label": "AI Tools Talk",
+        "tone":  "two friends casually reacting and discussing trending AI tools — one excited, one skeptical — like a real conversation",
+        "emoji": "💬",
+        "color_filter": "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",  # cool blue-green gaming vibe
+        "pexels_queries": ["gaming setup neon lights dark", "computer screen gaming room", "neon gaming background dark", "esports arena glowing"],
+        "script_style": "dialogue",  # two-character conversation format
     },
 ]
 
 TRENDING_SONGS_FREE = [
-    {"niche": "horror_facts",  "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
-    {"niche": "horror_facts",  "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
-    {"niche": "comedy_facts",  "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b736e00.mp3"},
-    {"niche": "comedy_facts",  "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
-    {"niche": "ai_tech",       "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
-    {"niche": "ai_tech",       "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
-    {"niche": "storytelling",  "url": "https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3"},
-    {"niche": "storytelling",  "url": "https://cdn.pixabay.com/download/audio/2023/01/04/audio_9b6d7c7b30.mp3"},
+    {"niche": "horror_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
+    {"niche": "horror_facts",    "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
+    {"niche": "comedy_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b736e00.mp3"},
+    {"niche": "comedy_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
+    {"niche": "ai_tech",         "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
+    {"niche": "ai_tech",         "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
+    {"niche": "storytelling",    "url": "https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3"},
+    {"niche": "storytelling",    "url": "https://cdn.pixabay.com/download/audio/2023/01/04/audio_9b6d7c7b30.mp3"},
+    {"niche": "ai_tools_talk",   "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
+    {"niche": "ai_tools_talk",   "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
 ]
 
 OUT              = Path("buzzBits_output")
@@ -212,33 +228,52 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
     if recent_topics:
         avoid_str = f"\nAVOID these recently used topics: {', '.join(recent_topics[:10])}"
 
+    # Dialogue style for AI Tools Talk niche
+    script_style = niche.get("script_style", "narrator")
+
+    if script_style == "dialogue":
+        narration_instruction = """DIALOGUE FORMAT — Two characters: Alex (excited, loves new AI tools) and Sam (skeptical, always asks if it's free).
+Write as a fast back-and-forth conversation about ONE trending AI tool.
+Format: "Alex: [line]. Sam: [line]. Alex: [line]. Sam: [line]."
+80-100 words total. Fast, funny, natural. Alex mentions the tool name and use. Sam asks if it's free. Alex says yes/no. Sam reacts.
+End with Alex saying the CTA line directly.
+ONE continuous string, no line breaks."""
+    else:
+        narration_instruction = """ONE continuous paragraph, 80-100 words, ZERO pauses between sentences, hook in first 3 words, 4 facts, ends with strong CTA. No line breaks."""
+
+    if script_style == "dialogue":
+        topic_instruction = "Pick ONE trending AI tool released recently (can be free or paid — mention which). Topic = the tool name."
+        tag_extras = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk"
+    else:
+        topic_instruction = "Fresh specific topic — no overused examples."
+        tag_extras = "#Facts #mindblown #didyouknow #amazingfacts"
+
     prompt = f"""You are a viral content creator for FreakyBits — YouTube/Instagram shorts.
 Niche: {niche['label']} | Tone: {niche['tone']} | Date: {today}
 {lang_instruction}
 {part_instruction}
 {avoid_str}
 
-Create a 32-second short. Narration = 4 short punchy facts/beats, NO filler words.
-IMPORTANT: Write narration as ONE continuous flow — no paragraph breaks, no pauses.
-Each sentence leads directly into the next. Fast paced, energetic, no gaps.
+{topic_instruction}
+Create a 32-second short. {narration_instruction}
 
 Reply ONLY in valid JSON (no markdown):
 {{
-  "topic": "specific topic",
+  "topic": "specific topic or AI tool name",
   "language": "{lang_code}",
   "part": {part if part else "null"},
   "youtube_title": "viral title under 60 chars",
   "youtube_description": "3 punchy sentences.\\n\\nSubscribe for daily {niche['label']} {niche['emoji']}!\\n\\n",
   "youtube_viral_caption": "hook under 10 words with emoji",
-  "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} #Facts #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo #factsinyourface #mindblown #didyouknow #amazingfacts",
-  "youtube_tags": ["FreakyBits","Shorts","Viral","Facts","{niche['name']}","trending","fyp","mindblown","amazingfacts","didyouknow"],
+  "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} {tag_extras} #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo",
+  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","AITools","FreeAI","TechTalk","NewAI"],
   "instagram_caption": "punchy IG caption 150 chars max with emojis",
   "instagram_viral_caption": "Reels hook 12 words max 2-3 emojis",
-  "instagram_trending_tags": "#reels #viral #freakybits #shorts #fyp #trending #facts #explore #reelsinstagram #reelsviral #instagram #viralreels #explorepage #shortsvideo #factsoflife #mindblown #amazingfacts #didyouknow #trending2024 #foryou",
+  "instagram_trending_tags": "#reels #viral #freakybits #shorts #fyp #trending #aitools #freeai #explore #reelsinstagram #reelsviral #instagram #viralreels #explorepage #shortsvideo #artificialintelligence #techtalk #newai #trending2024 #foryou",
   "trending_yt_song": "popular song - artist",
   "trending_ig_song": "popular song - artist",
-  "narration": "ONE continuous paragraph, 80-100 words, ZERO pauses between sentences, hook in first 3 words, 4 facts, ends with strong CTA. No line breaks.",
-  "pexels_queries": ["dark cinematic query 1", "dramatic query 2", "cinematic query 3", "moody query 4"]
+  "narration": "{narration_instruction.split(chr(10))[0]}",
+  "pexels_queries": ["gaming setup neon dark" if "{script_style}" == "dialogue" else "dark cinematic query 1", "esports arena glowing" if "{script_style}" == "dialogue" else "dramatic query 2", "neon gaming room" if "{script_style}" == "dialogue" else "cinematic query 3", "computer screen dark gaming" if "{script_style}" == "dialogue" else "moody query 4"]
 }}"""
 
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
