@@ -35,69 +35,62 @@ LANG_CONFIG = {
     },
 }
 
+# Horror story niche uses slower deeper voice
+HORROR_VOICE_OVERRIDE = {
+    "en": {"edge_voice": "en-US-GuyNeural",    "edge_rate": "-10%"},
+    "hi": {"edge_voice": "hi-IN-MadhurNeural", "edge_rate": "-5%"},
+}
+
 PART_SERIES_SCHEDULE = {1: 1, 6: 2, 12: 1, 16: 2}
 
-# ── NICHES ─────────────────────────────────────────────────────────
+# ── NICHES (3 active) ──────────────────────────────────────────────
 NICHES = [
     {
-        "name":  "horror_facts",
-        "label": "Horror Facts",
-        "tone":  "spine-chilling and mysterious, building dread with each fact",
-        "emoji": "👻",
-        "color_filter": "curves=all='0/0 100/80 200/160 255/200'",
-        "pexels_queries": ["dark abandoned building interior", "foggy forest night dark", "dark stormy sky lightning", "mysterious dark corridor"],
-        "script_style": "narrator",
+        "name":         "horror_story",
+        "label":        "Horror Story",
+        "emoji":        "👻",
+        "tone":         "slow, eerie, and suspenseful — like a campfire ghost story that builds dread then delivers a chilling twist",
+        "script_style": "story",      # full mini-story: hook → build → twist → end
+        "voice_rate":   "-10%",       # slower for dramatic effect
+        "music_volume": "0.12",       # eerie music slightly audible (not muted)
+        "color_filter": "curves=all='0/0 100/70 200/140 255/180'",  # very dark moody
+        "pexels_queries": ["dark foggy forest night", "abandoned house interior dark",
+                           "dark corridor horror", "cemetery moonlight fog"],
     },
     {
-        "name":  "comedy_facts",
-        "label": "Comedy Facts",
-        "tone":  "hilarious and shocking, punchline energy on every fact",
-        "emoji": "😂",
+        "name":         "comedy_facts",
+        "label":        "Comedy Facts",
+        "emoji":        "😂",
+        "tone":         "hilarious and shocking, punchline energy on every fact",
+        "script_style": "narrator",
+        "voice_rate":   "+20%",
+        "music_volume": "0.0",        # muted for algorithm
         "color_filter": "curves=all='0/0 100/110 200/210 255/255'",
-        "pexels_queries": ["colorful confetti explosion", "people laughing fun outdoors", "bright colorful balloons", "funny animals cute"],
-        "script_style": "narrator",
+        "pexels_queries": ["colorful confetti explosion", "people laughing fun outdoors",
+                           "bright colorful balloons", "funny animals cute"],
     },
     {
-        "name":  "ai_tech",
-        "label": "AI & Tech Facts",
-        "tone":  "mind-blowing and futuristic, tech feels like sci-fi",
-        "emoji": "🤖",
-        "color_filter": "colorchannelmixer=rr=0.5:gg=0.7:bb=1.2",
-        "pexels_queries": ["neon city night cyberpunk", "futuristic technology glowing", "digital data server room dark", "circuit board technology blue"],
-        "script_style": "narrator",
-    },
-    {
-        "name":  "storytelling",
-        "label": "Storytelling",
-        "tone":  "emotionally gripping, narrative-driven, builds tension",
-        "emoji": "📖",
-        "color_filter": "curves=all='0/10 100/90 200/185 255/240'",
-        "pexels_queries": ["epic mountain landscape dramatic", "ancient ruins mysterious", "dramatic storm clouds sky", "cinematic desert sunset"],
-        "script_style": "narrator",
-    },
-    # NEW NICHE — AI Tools Talk (two characters discussing trending AI tools)
-    {
-        "name":  "ai_tools_talk",
-        "label": "AI Tools Talk",
-        "tone":  "two friends casually reacting and discussing trending AI tools — one excited, one skeptical — like a real conversation",
-        "emoji": "💬",
-        "color_filter": "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",  # cool blue-green gaming vibe
-        "pexels_queries": ["gaming setup neon lights dark", "computer screen gaming room", "neon gaming background dark", "esports arena glowing"],
-        "script_style": "dialogue",  # two-character conversation format
+        "name":         "ai_tools_talk",
+        "label":        "AI Tools Talk",
+        "emoji":        "💬",
+        "tone":         "two friends casually reacting to trending AI tools — Alex excited, Sam skeptical",
+        "script_style": "dialogue",
+        "voice_rate":   "+15%",
+        "music_volume": "0.0",        # muted for algorithm
+        "color_filter": "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",
+        "pexels_queries": ["gaming setup neon lights dark", "computer screen gaming room",
+                           "neon gaming background dark", "esports arena glowing"],
     },
 ]
 
+# Songs — horror is audible, others muted
 TRENDING_SONGS_FREE = [
-    {"niche": "horror_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
-    {"niche": "horror_facts",    "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
-    {"niche": "comedy_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b736e00.mp3"},
-    {"niche": "comedy_facts",    "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
-    {"niche": "ai_tech",         "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
-    {"niche": "ai_tech",         "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
-    {"niche": "storytelling",    "url": "https://cdn.pixabay.com/download/audio/2022/11/22/audio_febc508520.mp3"},
-    {"niche": "storytelling",    "url": "https://cdn.pixabay.com/download/audio/2023/01/04/audio_9b6d7c7b30.mp3"},
-    {"niche": "ai_tools_talk",   "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
-    {"niche": "ai_tools_talk",   "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
+    {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
+    {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
+    {"niche": "comedy_facts",   "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b736e00.mp3"},
+    {"niche": "comedy_facts",   "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
+    {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
+    {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
 ]
 
 OUT              = Path("buzzBits_output")
@@ -202,86 +195,173 @@ def load_part1_topic():
 # ══════════════════════════════════════════════════════════════════
 #  STEP 1 — Generate Script
 # ══════════════════════════════════════════════════════════════════
+def get_viral_angle(niche_name: str, niche_label: str) -> str:
+    """Search web for currently trending viral angles for this niche."""
+    try:
+        search_queries = {
+            "horror_story":   f"viral horror story shorts reels 2025 trending",
+            "comedy_facts":   f"viral comedy facts shorts 2025 trending funny",
+            "ai_tools_talk":  f"trending AI tools 2025 free viral shorts",
+        }
+        query = search_queries.get(niche_name, f"viral {niche_label} shorts 2025")
+        resp  = requests.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"Accept": "application/json",
+                     "Accept-Encoding": "gzip",
+                     "X-Subscription-Token": "BSAGzGTrqRiZBXc2KhpLfq9WlHPwORv"},
+            params={"q": query, "count": 5},
+            timeout=8
+        )
+        if resp.status_code == 200:
+            results = resp.json().get("web", {}).get("results", [])
+            snippets = [r.get("description", "") for r in results[:3] if r.get("description")]
+            if snippets:
+                return "\nTRENDING CONTEXT (use this to inspire your angle):\n" + " | ".join(snippets[:2])[:400]
+    except Exception:
+        pass
+    # Fallback: hardcoded trending angles per niche
+    fallbacks = {
+        "horror_story":  "Trending: true paranormal encounters, sleep paralysis demons, real haunted locations",
+        "comedy_facts":  "Trending: weird animal facts, bizarre laws, shocking historical blunders",
+        "ai_tools_talk": "Trending: Sora, Gemini 2.5, Claude 3.7, Grok 3, free AI image generators",
+    }
+    return "\nTRENDING CONTEXT: " + fallbacks.get(niche_name, "use the most viral angle possible")
+
+
 def generate_content(niche, video_index, lang, part=None, part1_data=None):
     lang_label = lang["label"]
     lang_code  = lang["code"]
     print(f"\n🤖 [{niche['label']}] [{lang_label}]" + (f" [Part {part}]" if part else ""))
 
-    today = datetime.datetime.utcnow().strftime("%B %d, %Y")
+    today        = datetime.datetime.utcnow().strftime("%B %d, %Y")
+    script_style = niche.get("script_style", "narrator")
 
-    if lang_code == "hi":
-        lang_instruction = "LANGUAGE: Write EVERYTHING in Hindi (Devanagari). Hashtags stay English."
-    else:
-        lang_instruction = "LANGUAGE: English throughout."
+    # Language instruction
+    lang_instruction = (
+        "LANGUAGE: Write EVERYTHING in Hindi (Devanagari). Hashtags stay English."
+        if lang_code == "hi" else "LANGUAGE: English throughout."
+    )
 
+    # Part series instruction
     part_instruction = ""
     if part == 1:
-        part_instruction = f'PART 1 of 2: End narration with exactly: "{lang["follow_part2"]}". Title ends with (Part 1). Cliffhanger ending.'
+        part_instruction = (
+            f'PART 1 of 2: End narration with exactly: "{lang["follow_part2"]}". '
+            f'Title ends with (Part 1). End on a cliffhanger.'
+        )
     elif part == 2:
         prev = part1_data.get("topic", "previous topic") if part1_data else "previous topic"
         part_instruction = f'PART 2 of 2: Continue from "{prev}". Title ends with (Part 2). Satisfying conclusion.'
 
-    # Build list of recently used topics to avoid repeats
-    used = load_used_topics()
-    recent_topics = list(used.keys())[-20:] if used else []
-    avoid_str = ""
-    if recent_topics:
-        avoid_str = f"\nAVOID these recently used topics: {', '.join(recent_topics[:10])}"
+    # Topic deduplication
+    used   = load_used_topics()
+    recent = list(used.keys())[-10:] if used else []
+    avoid_str = (f"\nAVOID these recently used topics: {', '.join(recent)}" if recent else "")
 
-    # Dialogue style for AI Tools Talk niche
-    script_style = niche.get("script_style", "narrator")
+    # Web search for viral trending angle
+    print(f"   🔍 Searching viral angles for [{niche['label']}]...")
+    viral_context = get_viral_angle(niche["name"], niche["label"])
 
-    if script_style == "dialogue":
-        narration_instruction = """DIALOGUE FORMAT — Two characters: Alex (excited, loves new AI tools) and Sam (skeptical, always asks if it's free).
-Write as a fast back-and-forth conversation about ONE trending AI tool.
-Format: "Alex: [line]. Sam: [line]. Alex: [line]. Sam: [line]."
-80-100 words total. Fast, funny, natural. Alex mentions the tool name and use. Sam asks if it's free. Alex says yes/no. Sam reacts.
-End with Alex saying the CTA line directly.
-ONE continuous string, no line breaks."""
+    # Script format per niche
+    if script_style == "story":
+        # Horror story — full mini narrative
+        narration_instruction = (
+            "HORROR STORY FORMAT:\n"
+            "Write a gripping 45-55 second horror mini-story with this exact structure:\n"
+            "1. HOOK (first 5 words must be terrifying — grab immediately)\n"
+            "2. BUILD (establish setting, creeping dread, sensory details)\n"
+            "3. TWIST (shocking revelation that reframes everything)\n"
+            "4. HAUNTING END (last line lingers in the mind — do NOT resolve fully)\n"
+            "100-120 words. Slow, eerie pacing. Every sentence adds dread.\n"
+            "Write as ONE continuous paragraph. No line breaks. No filler words."
+        )
+        topic_instruction  = "Pick ONE specific real haunted location, true paranormal case, or terrifying urban legend. Be specific — name the place, year, or person."
+        tag_extras         = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #CreepyStory #HorrorTok #ghost #haunted #scary"
+        ig_tags            = "#reels #viral #freakybits #horrorstory #scarystory #horror #ghost #paranormal #haunted #creepy #horrortok #scarytiktok #horrorreels #fyp #trending #explore #shortsvideo #truecrime #supernatural #chilling"
+        duration_note      = "45-55 seconds"
+        pexels_hint        = '["dark foggy forest night", "abandoned building interior", "cemetery dark fog", "dark corridor horror"]'
+
+    elif script_style == "dialogue":
+        narration_instruction = (
+            "DIALOGUE FORMAT:\n"
+            "Two characters: Alex (excited about AI) and Sam (skeptical, always asks if free).\n"
+            "Format: \"Alex: [line]. Sam: [line]. Alex: [line]. Sam: [line]. Alex: [CTA].\"\n"
+            "80-100 words. Fast, funny, natural conversation about ONE specific AI tool.\n"
+            "Mention the tool name, what it does, and if it's free or paid.\n"
+            "ONE continuous string, no line breaks."
+        )
+        topic_instruction  = "Pick ONE specific trending AI tool from 2025 or 2026. Be specific — name it, its main use, its price (free/paid)."
+        tag_extras         = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk #AIShorts"
+        ig_tags            = "#reels #viral #freakybits #aitools #freeai #artificialintelligence #techtalk #newai #aiupdates #technews #futuretech #shorts #fyp #trending #explore #reelsinstagram #viralreels #tech #airevolution #innovation"
+        duration_note      = "32 seconds"
+        pexels_hint        = '["gaming setup neon dark", "esports arena glowing", "neon gaming room dark", "computer screen gaming"]'''
+
     else:
-        narration_instruction = """ONE continuous paragraph, 80-100 words, ZERO pauses between sentences, hook in first 3 words, 4 facts, ends with strong CTA. No line breaks."""
+        # Comedy narrator
+        narration_instruction = (
+            "ONE continuous paragraph, 80-100 words, ZERO pauses between sentences, "
+            "hook in first 3 words, 4 shocking funny facts, strong CTA at end. No line breaks."
+        )
+        topic_instruction  = "Fresh specific topic — shocking, funny, unbelievable. No overused examples."
+        tag_extras         = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
+        ig_tags            = "#reels #viral #freakybits #shorts #fyp #trending #facts #explore #reelsinstagram #reelsviral #viralreels #explorepage #shortsvideo #mindblown #amazingfacts #didyouknow #funnyfacts #comedy #trending2024 #foryou"
+        duration_note      = "32 seconds"
+        pexels_hint        = '["colorful confetti explosion", "people laughing outdoors", "bright colorful balloons", "funny animals cute"]'''
 
-    if script_style == "dialogue":
-        topic_instruction = "Pick ONE trending AI tool released recently (can be free or paid — mention which). Topic = the tool name."
-        tag_extras = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk"
-    else:
-        topic_instruction = "Fresh specific topic — no overused examples."
-        tag_extras = "#Facts #mindblown #didyouknow #amazingfacts"
+    prompt = f"""You are an expert viral content writer for FreakyBits — YouTube/Instagram shorts.
+You study what goes viral and write scripts that KEEP viewers watching to the very last second.
 
-    prompt = f"""You are a viral content creator for FreakyBits — YouTube/Instagram shorts.
-Niche: {niche['label']} | Tone: {niche['tone']} | Date: {today}
+Niche: {niche['label']} | Tone: {niche['tone']}
+Date: {today} | Target duration: {duration_note}
 {lang_instruction}
 {part_instruction}
 {avoid_str}
+{viral_context}
 
-{topic_instruction}
-Create a 32-second short. {narration_instruction}
+TASK: {topic_instruction}
 
-Reply ONLY in valid JSON (no markdown):
+SCRIPT REQUIREMENTS:
+{narration_instruction}
+
+WRITING RULES (CRITICAL):
+- First 3 words must HOOK immediately — no "Did you know" or "Today we"
+- Every sentence must make the viewer MORE invested, not less
+- Use specific names, dates, places — never vague
+- End must leave viewer wanting more or deeply unsettled
+- Write like a professional screenwriter, not a listicle
+
+Reply ONLY in valid JSON (no markdown, no extra text):
 {{
-  "topic": "specific topic or AI tool name",
+  "topic": "specific topic/tool/story name",
   "language": "{lang_code}",
   "part": {part if part else "null"},
-  "youtube_title": "viral title under 60 chars",
+  "youtube_title": "viral title under 60 chars — curiosity gap or shock",
   "youtube_description": "3 punchy sentences.\\n\\nSubscribe for daily {niche['label']} {niche['emoji']}!\\n\\n",
   "youtube_viral_caption": "hook under 10 words with emoji",
   "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} {tag_extras} #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo",
-  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","AITools","FreeAI","TechTalk","NewAI"],
+  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","mindblown","horror","viral"],
   "instagram_caption": "punchy IG caption 150 chars max with emojis",
   "instagram_viral_caption": "Reels hook 12 words max 2-3 emojis",
-  "instagram_trending_tags": "#reels #viral #freakybits #shorts #fyp #trending #aitools #freeai #explore #reelsinstagram #reelsviral #instagram #viralreels #explorepage #shortsvideo #artificialintelligence #techtalk #newai #trending2024 #foryou",
-  "trending_yt_song": "popular song - artist",
-  "trending_ig_song": "popular song - artist",
-  "narration": "{narration_instruction.split(chr(10))[0]}",
-  "pexels_queries": ["gaming setup neon dark" if "{script_style}" == "dialogue" else "dark cinematic query 1", "esports arena glowing" if "{script_style}" == "dialogue" else "dramatic query 2", "neon gaming room" if "{script_style}" == "dialogue" else "cinematic query 3", "computer screen dark gaming" if "{script_style}" == "dialogue" else "moody query 4"]
+  "instagram_trending_tags": "{ig_tags}",
+  "trending_yt_song": "popular song - artist matching niche mood",
+  "trending_ig_song": "popular song - artist matching niche mood",
+  "narration": "WRITE THE FULL NARRATION HERE as one continuous string",
+  "pexels_queries": {pexels_hint}
 }}"""
 
-    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    raw = response.text.strip().replace("```json","").replace("```","").strip()
-    start = raw.find("{"); end = raw.rfind("}") + 1
-    if start != -1 and end > start:
-        raw = raw[start:end]
-    data = json.loads(raw)
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            raw      = response.text.strip().replace("```json","").replace("```","").strip()
+            start    = raw.find("{"); end = raw.rfind("}") + 1
+            if start != -1 and end > start:
+                raw = raw[start:end]
+            data = json.loads(raw)
+            break
+        except Exception as e:
+            if attempt == 2:
+                raise RuntimeError(f"Content generation failed after 3 attempts: {e}")
+            time.sleep(2 ** attempt)
 
     data["youtube_description_final"] = (
         f"{data['youtube_description']}\n{'─'*40}\n"
@@ -302,22 +382,27 @@ Reply ONLY in valid JSON (no markdown):
 # ══════════════════════════════════════════════════════════════════
 #  STEP 2 — Edge TTS (fast neural voice, NO gaps between sentences)
 # ══════════════════════════════════════════════════════════════════
-def generate_voiceover(content, video_idx, lang):
-    print(f"   🎙️  Edge TTS [{lang['label']}] voice: {lang['edge_voice']} rate: {lang['edge_rate']}")
-    audio_path = OUT / f"voice_{video_idx:02d}.mp3"
+def generate_voiceover(content, video_idx, lang, niche=None):
+    """Generate voiceover with niche-specific voice and rate."""
+    # Apply horror voice override (deeper, slower voice)
+    voice_settings = dict(lang)
+    if niche and niche.get("name") == "horror_story":
+        override = HORROR_VOICE_OVERRIDE.get(lang["code"], {})
+        voice_settings.update(override)
+        print(f"   🎙️  Edge TTS [Horror] {voice_settings['edge_voice']} {voice_settings['edge_rate']} (slow dramatic)")
+    else:
+        print(f"   🎙️  Edge TTS [{lang['label']}] {voice_settings['edge_voice']} {voice_settings['edge_rate']}")
 
-    # Clean narration: remove extra spaces, join everything smoothly
-    narration = content["narration"]
-    narration = re.sub(r'\s+', ' ', narration).strip()
-    # Remove any line breaks that would cause pauses
-    narration = narration.replace('\n', ' ').replace('\r', ' ')
+    audio_path = OUT / f"voice_{video_idx:02d}.mp3"
+    narration  = re.sub(r'\s+', ' ', content["narration"]).strip()
+    narration  = narration.replace('\n', ' ').replace('\r', ' ')
 
     async def _tts():
         import edge_tts
         communicate = edge_tts.Communicate(
             text=narration,
-            voice=lang["edge_voice"],
-            rate=lang["edge_rate"],
+            voice=voice_settings["edge_voice"],
+            rate=voice_settings["edge_rate"],
             volume="+15%",
             pitch="+0Hz"
         )
@@ -586,7 +671,7 @@ def assemble_video(clip_paths, audio_path, srt_path, video_idx, niche, song_path
             "ffmpeg", "-y",
             "-i", str(merged), "-i", str(audio_path), "-i", str(song_path),
             "-filter_complex",
-            "[1:a]volume=1.0[vo];[2:a]volume=0.0[vs];[vo][vs]amix=inputs=2:duration=first[a]",
+            "[1:a]volume=1.0[vo];[2:a]volume={music_vol}[vs];[vo][vs]amix=inputs=2:duration=first[a]".format(music_vol=niche.get("music_volume","0.0")),
             "-map", "0:v:0", "-map", "[a]",
             "-c:v", "copy", "-c:a", "aac", "-shortest", str(with_audio)
         ], capture_output=True)
@@ -737,7 +822,7 @@ def make_one_video(video_idx):
     print(f"{'─'*62}")
 
     content  = generate_content(niche, video_idx, lang, part, part1_data)
-    audio    = generate_voiceover(content, video_idx, lang)
+    audio    = generate_voiceover(content, video_idx, lang, niche)
     srt      = generate_subtitles(content, audio, video_idx, lang)
     clips    = fetch_all_clips(content, niche, video_idx)
     song     = get_trending_song(niche["name"], video_idx)
