@@ -52,7 +52,7 @@ NICHES = [
         "tone":         "slow, eerie, and suspenseful — like a campfire ghost story that builds dread then delivers a chilling twist",
         "script_style": "story",      # full mini-story: hook → build → twist → end
         "voice_rate":   "-10%",       # slower for dramatic effect
-        "music_volume": "0.12",       # eerie music slightly audible (not muted)
+        "music_volume": "0.30",       # eerie music clearly audible for horror atmosphere
         "color_filter": "curves=all='0/0 100/70 200/140 255/180'",  # very dark moody
         "pexels_queries": ["dark foggy forest night", "abandoned house interior dark",
                            "dark corridor horror", "cemetery moonlight fog"],
@@ -246,8 +246,10 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
     part_instruction = ""
     if part == 1:
         part_instruction = (
-            f'PART 1 of 2: End narration with exactly: "{lang["follow_part2"]}". '
-            f'Title ends with (Part 1). End on a cliffhanger.'
+            f'PART SERIES — THIS IS PART 1 of 2. '
+            f'The narration MUST end with this EXACT sentence spoken out loud: "{lang["follow_part2"]}" '
+            f'Do NOT skip this. It must be the very last thing said. '
+            f'Title must end with (Part 1). End story on a cliffhanger — do not resolve it.'
         )
     elif part == 2:
         prev = part1_data.get("topic", "previous topic") if part1_data else "previous topic"
@@ -273,14 +275,14 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
             "2. BUILD — describe the location, the person, what they heard or saw — sensory and specific\n"
             "3. TWIST — the moment everything changed — delivered calmly which makes it more disturbing\n"
             "4. END — ONE final sentence that haunts. Unresolved. Lingers. \n"
-            "100-120 words. Use phrases like 'here's what nobody could explain', 'and that's when they noticed'.\n"
+            "150-170 words. Use phrases like 'here's what nobody could explain', 'and that's when they noticed'.\n"
             "Sound like a true crime podcast host — calm, real, terrifying.\n"
             "ONE continuous paragraph. No line breaks."
         )
         topic_instruction  = "Pick ONE specific real haunted location, true paranormal case, or terrifying urban legend. Be specific — name the place, year, or person."
         tag_extras         = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #CreepyStory #HorrorTok #ghost #haunted #scary"
         ig_tags            = "#reels #viral #freakybits #horrorstory #scarystory #horror #ghost #paranormal #haunted #creepy #horrortok #scarytiktok #horrorreels #fyp #trending #explore #shortsvideo #truecrime #supernatural #chilling"
-        duration_note      = "45-55 seconds"
+        duration_note      = "55-65 seconds"
         pexels_hint        = '["dark foggy forest night", "abandoned building interior", "cemetery dark fog", "dark corridor horror"]'
 
     elif script_style == "dialogue":
@@ -289,13 +291,13 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
             "Two characters: Alex (hyped about AI) and Sam (skeptical broke guy who always asks if free).\n"
             "Format: \"Did you know [tool] exists? Alex: bro this AI just [does X]. Sam: wait is it free? "
             "Alex: [yes/no + detail]. Sam: [reaction]. Alex: Follow FreakyBits for more free AI drops!\"\n"
-            "80-100 words. Sound like two friends texting — casual, punchy, funny.\n"
+            "120-140 words. Sound like two friends texting — casual, punchy, funny.\n"
             "ONE continuous string, no line breaks."
         )
         topic_instruction  = "Pick ONE specific trending AI tool from 2025 or 2026. Be specific — name it, its main use, its price (free/paid)."
         tag_extras         = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk #AIShorts"
         ig_tags            = "#reels #viral #freakybits #aitools #freeai #artificialintelligence #techtalk #newai #aiupdates #technews #futuretech #shorts #fyp #trending #explore #reelsinstagram #viralreels #tech #airevolution #innovation"
-        duration_note      = "32 seconds"
+        duration_note      = "40-50 seconds"
         pexels_hint        = '["gaming setup neon dark", "esports arena glowing", "neon gaming room dark", "computer screen gaming"]'''
 
     else:
@@ -304,12 +306,12 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
             "COMEDY FACTS FORMAT: Start with 'Did you know' — then deliver 4 shocking funny facts "
             "in a conversational tone like you're texting a friend who loves weird trivia. "
             "Add reactions like 'I know right?', 'wait it gets better', 'no seriously'. "
-            "80-100 words. ONE continuous string. End with 'Follow for more wild facts!'"
+            "120-140 words. ONE continuous string. End with 'Follow for more wild facts!'"
         )
         topic_instruction  = "Fresh specific topic — shocking, funny, unbelievable. No overused examples."
         tag_extras         = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
         ig_tags            = "#reels #viral #freakybits #shorts #fyp #trending #facts #explore #reelsinstagram #reelsviral #viralreels #explorepage #shortsvideo #mindblown #amazingfacts #didyouknow #funnyfacts #comedy #trending2024 #foryou"
-        duration_note      = "32 seconds"
+        duration_note      = "40-50 seconds"
         pexels_hint        = '["colorful confetti explosion", "people laughing outdoors", "bright colorful balloons", "funny animals cute"]'''
 
     prompt = f"""You are a world-class viral short-form video scriptwriter. Your scripts feel like a friend excitedly telling you something insane — not like someone reading off a teleprompter.
@@ -337,7 +339,7 @@ WRITING RULES:
 - Horror stories start with something that immediately creates dread
 - Every sentence must make viewer MORE curious or MORE scared
 - Use real names, real places, real years — specifics make stories believable
-- End ALWAYS with "Follow for more!" or niche CTA — said naturally, not awkwardly
+- End ALWAYS with spoken CTA: For facts say "Follow FreakyBits for more!" For Part 1 say EXACTLY the follow_part2 phrase provided — this is mandatory and must be the last sentence spoken
 - Write the narration as ONE continuous string — no line breaks, no bullet points
 - Sound like MrBeast or Yes Theory narration style — energetic and human
 
