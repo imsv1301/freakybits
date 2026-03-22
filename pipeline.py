@@ -19,11 +19,11 @@ INSTAGRAM_USERNAME    = os.environ.get("INSTAGRAM_USERNAME", "")
 INSTAGRAM_PASSWORD    = os.environ.get("INSTAGRAM_PASSWORD", "")
 TELEGRAM_BOT_TOKEN    = os.environ.get("TELEGRAM_BOT_TOKEN", "8629033019:AAHlDft5_pPVwFs9DZxiUtsM0y_SXhUBhdI")
 TELEGRAM_CHAT_ID      = os.environ.get("TELEGRAM_CHAT_ID", "7801226290")
-VIDEOS_PER_RUN        = 3
+VIDEOS_PER_RUN        = 4
 VIDEO_W, VIDEO_H      = 1080, 1920   # 9:16 vertical
 
 # ── LANGUAGE CONFIG ────────────────────────────────────────────────
-LANG_PATTERN = ["en", "hi", "en"]
+LANG_PATTERN = ["en", "hi", "en", "en"]
 LANG_CONFIG = {
     "en": {
         "label":        "English",
@@ -57,6 +57,7 @@ NICHES = [
         "script_style": "story",      # full mini-story: hook → build → twist → end
         "voice_rate":   "-10%",       # slower for dramatic effect
         "music_volume": "0.30",       # eerie music clearly audible for horror atmosphere
+        "upload_instagram": False,
         "color_filter": "curves=all='0/0 100/70 200/140 255/180'",  # very dark moody
         "pexels_queries": ["dark foggy forest night", "abandoned house interior dark",
                            "dark corridor horror", "cemetery moonlight fog"],
@@ -69,6 +70,7 @@ NICHES = [
         "script_style": "narrator",
         "voice_rate":   "+20%",
         "music_volume": "0.0",        # muted for algorithm
+        "upload_instagram": False,
         "color_filter": "curves=all='0/0 100/110 200/210 255/255'",
         "pexels_queries": ["colorful confetti explosion", "people laughing fun outdoors",
                            "bright colorful balloons", "funny animals cute"],
@@ -82,8 +84,22 @@ NICHES = [
         "voice_rate":   "+15%",
         "music_volume": "0.0",        # muted for algorithm
         "color_filter": "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",
+        "upload_instagram": False,
         "pexels_queries": ["gaming setup neon lights dark", "computer screen gaming room",
                            "neon gaming background dark", "esports arena glowing"],
+    },
+    {
+        "name":         "tech_drops",
+        "label":        "Tech Drops",
+        "emoji":        "💻",
+        "tone":         "sarcastic Gen-Z energy — two friends hyped about free tools, GitHub repos, hidden productivity hacks",
+        "script_style": "tech_drops",
+        "voice_rate":   "+20%",
+        "music_volume": "0.0",
+        "upload_instagram": True,
+        "color_filter": "colorchannelmixer=rr=0.8:gg=0.9:bb=1.2",
+        "pexels_queries": ["laptop coffee shop aesthetic", "coding dark screen neon",
+                           "developer workspace setup", "tech startup modern office"],
     },
 ]
 
@@ -95,6 +111,7 @@ TRENDING_SONGS_FREE = [
     {"niche": "comedy_facts",   "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
     {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
     {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
+    {"niche": "tech_drops",     "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
 ]
 
 OUT              = Path("buzzBits_output")
@@ -206,6 +223,7 @@ def get_viral_angle(niche_name: str, niche_label: str) -> str:
             "horror_story":   f"viral horror story shorts reels 2025 trending",
             "comedy_facts":   f"viral comedy facts shorts 2025 trending funny",
             "ai_tools_talk":  f"trending AI tools 2025 free viral shorts",
+            "tech_drops":     f"free github repos productivity tools viral shorts 2025",
         }
         query = search_queries.get(niche_name, f"viral {niche_label} shorts 2025")
         resp  = requests.get(
@@ -228,6 +246,7 @@ def get_viral_angle(niche_name: str, niche_label: str) -> str:
         "horror_story":  "Trending: true paranormal encounters, sleep paralysis demons, real haunted locations",
         "comedy_facts":  "Trending: weird animal facts, bizarre laws, shocking historical blunders",
         "ai_tools_talk": "Trending: Sora, Gemini 2.5, Claude 3.7, Grok 3, free AI image generators",
+        "tech_drops":    "Trending: free GitHub repos, hidden AI tools, free Notion/Figma alternatives, productivity hacks",
     }
     return "\nTRENDING CONTEXT: " + fallbacks.get(niche_name, "use the most viral angle possible")
 
@@ -269,7 +288,29 @@ def generate_content(niche, video_index, lang, part=None, part1_data=None):
     viral_context = get_viral_angle(niche["name"], niche["label"])
 
     # Script format per niche
-    if script_style == "story":
+    if script_style == "tech_drops":
+        narration_instruction = (
+            "MASTER CONTROLLER FORMAT — always English, sarcastic Gen-Z tone:\n"
+            "Generate A/B dialogue script for a 20-30 second short.\n"
+            "A = excited tech bro who found something free and amazing\n"
+            "B = skeptical Gen-Z who always asks is it free??\n"
+            "EXACT FORMAT: A: [STRONG hook — first 3 words stop the scroll]. "
+            "B: [Wait what? / Bro no way]. "
+            "A: [name the tool + what it does in 1 line]. "
+            "B: [I been paying for this?? / No cap??]. "
+            "A: [how to get it free — 1 sentence]. "
+            "B: [hype reaction]. "
+            "A: [Follow FreakyBits for more free drops!]\n"
+            "RULES: Pattern interrupts only. Short punchy subtitle-friendly lines. "
+            "Sarcastic witty dramatic. 20-30 seconds. Always mention if free. Always English."
+        )
+        topic_instruction  = "Pick ONE specific FREE tool, GitHub repo, or productivity hack trending in 2025-2026. Be VERY specific — name it exactly."
+        tag_extras         = "#TechDrops #FreeTools #GitHub #AITools #ProductivityHacks #FreeAI #DevTools #TechHacks #GenZ #Shorts"
+        ig_tags            = "#reels #viral #freakybits #techdrops #freetools #github #aitools #productivity #coding #devtools #fyp #trending #explore #reelsinstagram #viralreels #freestuff #techhacks #genz #innovation #techtok"
+        duration_note      = "20-30 seconds"
+        pexels_hint        = '["laptop coffee shop aesthetic", "coding dark screen neon", "developer workspace setup", "tech startup modern office"]'
+
+    elif script_style == "story":
         # Horror story — full mini narrative
         narration_instruction = (
             "HORROR STORY FORMAT: \n"
@@ -850,7 +891,7 @@ def make_one_video(video_idx):
     niche      = pick_niche(video_idx)
     lang       = pick_language(video_idx)
     # AI Tools Talk is always English — override Hindi slot
-    if niche["name"] == "ai_tools_talk" and lang["code"] == "hi":
+    if niche["name"] in ["ai_tools_talk", "tech_drops"] and lang["code"] == "hi":
         lang = {"code": "en", **LANG_CONFIG["en"]}
     part       = get_current_part(video_idx)
     part1_data = load_part1_topic() if part == 2 else None
@@ -872,12 +913,12 @@ def make_one_video(video_idx):
     song     = get_trending_song(niche["name"], video_idx)
     video    = assemble_video(clips, audio, srt, video_idx, niche, song)  # srt=None for Hindi
     yt_url   = upload_youtube(video, content)
-    # Instagram — English only (no Hindi reels on Instagram)
-    if lang["code"] == "en":
+    # Instagram — Tech Drops niche ONLY
+    if niche.get("upload_instagram", False):
         ig_url = upload_instagram(video, content)
     else:
         ig_url = None
-        print("   ⏭️  Instagram skipped for Hindi video (English only)")
+        print("   ⏭️  Instagram skipped — YT only niche")
 
     if part == 1:
         save_part1_topic(content["topic"], niche["name"], lang["code"])
