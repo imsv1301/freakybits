@@ -5,7 +5,8 @@ Stack: Gemini 2.5 Flash + Pexels HD + Edge TTS (fast neural) + FFmpeg subtitles
 Style: Dark cinematic, bold word-by-word subtitles, 9:16 vertical, no voice gaps
 """
 
-import os, sys, json, time, pickle, datetime, subprocess, requests, asyncio, re
+import os, sys, json, time, pickle, datetime, subprocess, requests, asyncio, re, smtplib
+from email.mime.text import MIMEText
 from pathlib import Path
 from google import genai
 
@@ -15,6 +16,10 @@ PEXELS_API_KEY        = os.environ.get("PEXELS_API_KEY", "")
 YOUTUBE_SECRETS_FILE  = "youtube_secrets.json"
 INSTAGRAM_TOKEN       = os.environ.get("INSTAGRAM_TOKEN", "")
 INSTAGRAM_ACCOUNT_ID  = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
+INSTAGRAM_USERNAME    = os.environ.get("INSTAGRAM_USERNAME", "")
+INSTAGRAM_PASSWORD    = os.environ.get("INSTAGRAM_PASSWORD", "")
+NOTIFY_EMAIL          = os.environ.get("NOTIFY_EMAIL", "sahilvahora.ibpes@gmail.com")
+GMAIL_APP_PASSWORD    = os.environ.get("GMAIL_APP_PASSWORD", "")
 VIDEOS_PER_RUN        = 3
 VIDEO_W, VIDEO_H      = 1080, 1920   # 9:16 vertical
 
@@ -799,25 +804,19 @@ def upload_instagram(video_path, content):
     except Exception as e:
         print(f"   ⚠️  Host failed: {e}"); return "FAILED"
 
-    base = f"https://graph.facebook.com/v18.0/{INSTAGRAM_ACCOUNT_ID}"
-    container = requests.post(f"{base}/media", params={
-        "media_type": "REELS", "video_url": video_url,
-        "caption": content.get("instagram_caption_final", content["instagram_caption"]),
-        "access_token": INSTAGRAM_TOKEN
-    }).json()
-
-    cid = container.get("id")
-    if not cid:
-        print(f"   ❌ Container error: {container}"); return "FAILED"
-
-    time.sleep(45)
-    pub = requests.post(f"{base}/media_publish", params={
-        "creation_id": cid, "access_token": INSTAGRAM_TOKEN
-    }).json()
-
-    url = f"https://www.instagram.com/reel/{pub.get('id','unknown')}"
-    print(f"   ✅ Instagram → {url}")
-    return url
+    try:
+        from instagrapi import Client
+        cl = Client()
+        cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
+        caption = content.get("instagram_caption_final", content.get("instagram_caption", ""))
+        media   = cl.clip_upload(str(video_path), caption)
+        url     = f"https://www.instagram.com/reel/{media.code}/"
+        print(f"   ✅ Instagram Reel → {url}")
+        cl.logout()
+        return url
+    except Exception as e:
+        print(f"   ❌ Instagram upload failed: {e}")
+        return None
 
 
 # ══════════════════════════════════════════════════════════════════
