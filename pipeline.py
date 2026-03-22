@@ -710,8 +710,12 @@ def assemble_video(clip_paths, audio_path, srt_path, video_idx, niche, song_path
     if ret.returncode != 0:
         raise RuntimeError(f"Audio mix failed")
 
-    # Burn subtitles
-    final_path = burn_subtitles(with_audio, srt_path, final_path)
+    # Burn subtitles (skip if srt_path is None — Hindi videos)
+    if srt_path is not None:
+        final_path = burn_subtitles(with_audio, srt_path, final_path)
+    else:
+        final_path = with_audio
+        print("   ⏭️  No subtitles for Hindi")
 
     # Get stats
     probe = subprocess.run([
@@ -858,12 +862,22 @@ def make_one_video(video_idx):
 
     content  = generate_content(niche, video_idx, lang, part, part1_data)
     audio    = generate_voiceover(content, video_idx, lang, niche)
-    srt      = generate_subtitles(content, audio, video_idx, lang)
+    # Skip subtitles for Hindi — not readable on screen
+    if lang["code"] == "hi":
+        srt = None
+        print("   ⏭️  Subtitles skipped for Hindi video")
+    else:
+        srt      = generate_subtitles(content, audio, video_idx, lang)
     clips    = fetch_all_clips(content, niche, video_idx)
     song     = get_trending_song(niche["name"], video_idx)
-    video    = assemble_video(clips, audio, srt, video_idx, niche, song)
+    video    = assemble_video(clips, audio, srt, video_idx, niche, song)  # srt=None for Hindi
     yt_url   = upload_youtube(video, content)
-    ig_url   = upload_instagram(video, content)
+    # Instagram — English only (no Hindi reels on Instagram)
+    if lang["code"] == "en":
+        ig_url = upload_instagram(video, content)
+    else:
+        ig_url = None
+        print("   ⏭️  Instagram skipped for Hindi video (English only)")
 
     if part == 1:
         save_part1_topic(content["topic"], niche["name"], lang["code"])
