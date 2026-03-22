@@ -5,8 +5,7 @@ Stack: Gemini 2.5 Flash + Pexels HD + Edge TTS (fast neural) + FFmpeg subtitles
 Style: Dark cinematic, bold word-by-word subtitles, 9:16 vertical, no voice gaps
 """
 
-import os, sys, json, time, pickle, datetime, subprocess, requests, asyncio, re, smtplib
-from email.mime.text import MIMEText
+import os, sys, json, time, pickle, datetime, subprocess, requests, asyncio, re
 from pathlib import Path
 from google import genai
 
@@ -18,8 +17,8 @@ INSTAGRAM_TOKEN       = os.environ.get("INSTAGRAM_TOKEN", "")
 INSTAGRAM_ACCOUNT_ID  = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
 INSTAGRAM_USERNAME    = os.environ.get("INSTAGRAM_USERNAME", "")
 INSTAGRAM_PASSWORD    = os.environ.get("INSTAGRAM_PASSWORD", "")
-NOTIFY_EMAIL          = os.environ.get("NOTIFY_EMAIL", "sahilvahora.ibpes@gmail.com")
-GMAIL_APP_PASSWORD    = os.environ.get("GMAIL_APP_PASSWORD", "")
+TELEGRAM_BOT_TOKEN    = os.environ.get("TELEGRAM_BOT_TOKEN", "8629033019:AAHlDft5_pPVwFs9DZxiUtsM0y_SXhUBhdI")
+TELEGRAM_CHAT_ID      = os.environ.get("TELEGRAM_CHAT_ID", "7801226290")
 VIDEOS_PER_RUN        = 3
 VIDEO_W, VIDEO_H      = 1080, 1920   # 9:16 vertical
 
@@ -791,18 +790,21 @@ def upload_youtube(video_path, content):
 # ══════════════════════════════════════════════════════════════════
 
 def send_notification(subject, body):
-    """Send Gmail notification after each pipeline run."""
-    if not GMAIL_APP_PASSWORD:
+    """Send Telegram notification after each pipeline run."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
     try:
-        msg            = MIMEText(body)
-        msg["Subject"] = subject
-        msg["From"]    = NOTIFY_EMAIL
-        msg["To"]      = NOTIFY_EMAIL
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(NOTIFY_EMAIL, GMAIL_APP_PASSWORD)
-            server.sendmail(NOTIFY_EMAIL, NOTIFY_EMAIL, msg.as_string())
-        print("   📧 Email notification sent!")
+        msg  = f"🎬 *{subject}*\n\n{body}"
+        url  = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        resp = requests.post(url, json={
+            "chat_id":    TELEGRAM_CHAT_ID,
+            "text":       msg,
+            "parse_mode": "Markdown"
+        }, timeout=10)
+        if resp.status_code == 200:
+            print("   📱 Telegram notification sent!")
+        else:
+            print(f"   ⚠️  Telegram failed: {resp.text}")
     except Exception as e:
         print(f"   ⚠️  Notification failed: {e}")
 
