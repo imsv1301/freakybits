@@ -789,6 +789,24 @@ def upload_youtube(video_path, content):
 # ══════════════════════════════════════════════════════════════════
 #  STEP 7B — Instagram Upload
 # ══════════════════════════════════════════════════════════════════
+
+def send_notification(subject, body):
+    """Send Gmail notification after each pipeline run."""
+    if not GMAIL_APP_PASSWORD:
+        return
+    try:
+        msg            = MIMEText(body)
+        msg["Subject"] = subject
+        msg["From"]    = NOTIFY_EMAIL
+        msg["To"]      = NOTIFY_EMAIL
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(NOTIFY_EMAIL, GMAIL_APP_PASSWORD)
+            server.sendmail(NOTIFY_EMAIL, NOTIFY_EMAIL, msg.as_string())
+        print("   📧 Email notification sent!")
+    except Exception as e:
+        print(f"   ⚠️  Notification failed: {e}")
+
+
 def upload_instagram(video_path, content):
     if not INSTAGRAM_TOKEN or INSTAGRAM_TOKEN == "PLACEHOLDER_ADD_LATER":
         print("   ⚠️  Instagram skipped — add token later")
