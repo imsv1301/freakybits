@@ -125,14 +125,14 @@ NICHES = [
 
 # Songs per niche
 TRENDING_SONGS_FREE = [
-    {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
-    {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
-    {"niche": "comedy_facts",   "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b736e00.mp3"},
-    {"niche": "comedy_facts",   "url": "https://cdn.pixabay.com/download/audio/2022/01/20/audio_d0ee71a7e6.mp3"},
-    {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
-    {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
-    {"niche": "tech_drops",     "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
-    {"niche": "tech_drops",     "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
+    {"niche": "horror_story",   "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "horror_story",   "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "comedy_facts",   "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "comedy_facts",   "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "ai_tools_talk",  "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "ai_tools_talk",  "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "tech_drops",     "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+    {"niche": "tech_drops",     "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
 ]
 
 OUT              = Path("buzzBits_output")
