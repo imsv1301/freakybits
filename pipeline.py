@@ -1,8 +1,29 @@
 """
-FreakyBits Auto Pipeline
-========================
+FreakyBits Auto Pipeline v4.0
+==============================
 Stack: Gemini 2.5 Flash + Pexels HD + Edge TTS (fast neural) + FFmpeg subtitles
 Style: Dark cinematic, bold word-by-word subtitles, 9:16 vertical, no voice gaps
+
+NICHES (4):
+  1. Horror Story   👻  — YouTube + Instagram (EN only)
+  2. Comedy Facts   😂  — YouTube only
+  3. AI Tools Talk  💬  — YouTube only
+  4. Tech Drops     💻  — YouTube + Instagram (EN only, always)
+
+UPLOAD RULES:
+  YouTube  → ALL 4 niches → 4 videos/run × 4 runs = 16 videos/day
+  Instagram → Tech Drops ONLY → 1 video/run × 4 runs = 4 reels/day
+
+MASTER CONTROLLER SCRIPT STYLE (Tech Drops):
+  - Hook in first 3 seconds (VERY strong)
+  - Pattern interrupts: "Wait what?", "Bro no way"
+  - Short subtitle-friendly lines
+  - 20-30 seconds max
+  - Sarcastic, witty, slightly dramatic
+  - Gen-Z / tech audience
+  - Gemini output → validate → improve → add hooks + sarcasm
+
+NOTIFICATIONS: Telegram bot after every run
 """
 
 import os, sys, json, time, pickle, datetime, subprocess, requests, asyncio, re
@@ -10,21 +31,20 @@ from pathlib import Path
 from google import genai
 
 # ── CONFIG ─────────────────────────────────────────────────────────
-GEMINI_API_KEY        = os.environ.get("GEMINI_API_KEY", "")
-PEXELS_API_KEY        = os.environ.get("PEXELS_API_KEY", "")
-YOUTUBE_SECRETS_FILE  = "youtube_secrets.json"
-INSTAGRAM_TOKEN       = os.environ.get("INSTAGRAM_TOKEN", "")
-INSTAGRAM_ACCOUNT_ID  = os.environ.get("INSTAGRAM_ACCOUNT_ID", "")
-INSTAGRAM_USERNAME    = os.environ.get("INSTAGRAM_USERNAME", "")
-INSTAGRAM_PASSWORD    = os.environ.get("INSTAGRAM_PASSWORD", "")
-TELEGRAM_BOT_TOKEN    = os.environ.get("TELEGRAM_BOT_TOKEN", "8629033019:AAHlDft5_pPVwFs9DZxiUtsM0y_SXhUBhdI")
-TELEGRAM_CHAT_ID      = os.environ.get("TELEGRAM_CHAT_ID", "7801226290")
-VIDEOS_PER_RUN        = 4
-VIDEO_W, VIDEO_H      = 1080, 1920   # 9:16 vertical
+GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
+PEXELS_API_KEY     = os.environ.get("PEXELS_API_KEY", "")
+INSTAGRAM_USERNAME = os.environ.get("INSTAGRAM_USERNAME", "")
+INSTAGRAM_PASSWORD = os.environ.get("INSTAGRAM_PASSWORD", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8629033019:AAHlDft5_pPVwFs9DZxiUtsM0y_SXhUBhdI")
+TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "7801226290")
+
+VIDEOS_PER_RUN = 4       # 4 niches × 4 runs/day = 16 videos/day on YouTube
+VIDEO_W        = 1080
+VIDEO_H        = 1920    # 9:16 vertical
 
 # ── LANGUAGE CONFIG ────────────────────────────────────────────────
-LANG_PATTERN = ["en", "hi", "en", "en"]
-LANG_CONFIG = {
+LANG_PATTERN = ["en", "hi", "en", "en"]   # 4 slots for 4 niches per run
+LANG_CONFIG  = {
     "en": {
         "label":        "English",
         "edge_voice":   "en-US-AndrewNeural",
@@ -47,63 +67,63 @@ HORROR_VOICE_OVERRIDE = {
 
 PART_SERIES_SCHEDULE = {1: 1, 6: 2, 12: 1, 16: 2}
 
-# ── NICHES (3 active) ──────────────────────────────────────────────
+# ── NICHES (4 active) ──────────────────────────────────────────────
 NICHES = [
     {
-        "name":         "horror_story",
-        "label":        "Horror Story",
-        "emoji":        "👻",
-        "tone":         "slow, eerie, and suspenseful — like a campfire ghost story that builds dread then delivers a chilling twist",
-        "script_style": "story",      # full mini-story: hook → build → twist → end
-        "voice_rate":   "-10%",       # slower for dramatic effect
-        "music_volume": "0.30",       # eerie music clearly audible for horror atmosphere
-        "upload_instagram": False,
-        "color_filter": "curves=all='0/0 100/70 200/140 255/180'",  # very dark moody
-        "pexels_queries": ["dark foggy forest night", "abandoned house interior dark",
-                           "dark corridor horror", "cemetery moonlight fog"],
+        "name":             "horror_story",
+        "label":            "Horror Story",
+        "emoji":            "👻",
+        "tone":             "slow, eerie, suspenseful — campfire ghost story that builds dread then delivers a chilling twist",
+        "script_style":     "story",
+        "music_volume":     "0.30",      # eerie music audible for horror
+        "color_filter":     "curves=all='0/0 100/70 200/140 255/180'",
+        "pexels_queries":   ["dark foggy forest night", "abandoned house interior dark",
+                             "dark corridor horror", "cemetery moonlight fog"],
+        "upload_instagram": True,        # uploads to Instagram
+        "always_english":   False,       # can be Hindi
     },
     {
-        "name":         "comedy_facts",
-        "label":        "Comedy Facts",
-        "emoji":        "😂",
-        "tone":         "hilarious and shocking, punchline energy on every fact",
-        "script_style": "narrator",
-        "voice_rate":   "+20%",
-        "music_volume": "0.0",        # muted for algorithm
-        "upload_instagram": False,
-        "color_filter": "curves=all='0/0 100/110 200/210 255/255'",
-        "pexels_queries": ["colorful confetti explosion", "people laughing fun outdoors",
-                           "bright colorful balloons", "funny animals cute"],
+        "name":             "comedy_facts",
+        "label":            "Comedy Facts",
+        "emoji":            "😂",
+        "tone":             "hilarious and shocking, punchline energy on every fact",
+        "script_style":     "narrator",
+        "music_volume":     "0.0",       # muted for algorithm
+        "color_filter":     "curves=all='0/0 100/110 200/210 255/255'",
+        "pexels_queries":   ["colorful confetti explosion", "people laughing fun outdoors",
+                             "bright colorful balloons", "funny animals cute"],
+        "upload_instagram": False,       # YouTube only
+        "always_english":   False,
     },
     {
-        "name":         "ai_tools_talk",
-        "label":        "AI Tools Talk",
-        "emoji":        "💬",
-        "tone":         "two friends casually reacting to trending AI tools — Alex excited, Sam skeptical",
-        "script_style": "dialogue",
-        "voice_rate":   "+15%",
-        "music_volume": "0.0",        # muted for algorithm
-        "color_filter": "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",
-        "upload_instagram": False,
-        "pexels_queries": ["gaming setup neon lights dark", "computer screen gaming room",
-                           "neon gaming background dark", "esports arena glowing"],
+        "name":             "ai_tools_talk",
+        "label":            "AI Tools Talk",
+        "emoji":            "💬",
+        "tone":             "two friends casually reacting to trending AI tools — Alex excited, Sam skeptical",
+        "script_style":     "dialogue",
+        "music_volume":     "0.0",
+        "color_filter":     "colorchannelmixer=rr=0.6:gg=0.8:bb=1.0",
+        "pexels_queries":   ["gaming setup neon lights dark", "computer screen gaming room",
+                             "neon gaming background dark", "esports arena glowing"],
+        "upload_instagram": False,       # YouTube only
+        "always_english":   True,        # always English
     },
     {
-        "name":         "tech_drops",
-        "label":        "Tech Drops",
-        "emoji":        "💻",
-        "tone":         "sarcastic Gen-Z energy — two friends hyped about free tools, GitHub repos, hidden productivity hacks",
-        "script_style": "tech_drops",
-        "voice_rate":   "+20%",
-        "music_volume": "0.0",
-        "upload_instagram": True,
-        "color_filter": "colorchannelmixer=rr=0.8:gg=0.9:bb=1.2",
-        "pexels_queries": ["laptop coffee shop aesthetic", "coding dark screen neon",
-                           "developer workspace setup", "tech startup modern office"],
+        "name":             "tech_drops",
+        "label":            "Tech Drops",
+        "emoji":            "💻",
+        "tone":             "sarcastic Gen-Z tech bro dropping hidden gems — fast, punchy, slightly dramatic",
+        "script_style":     "tech_drops",
+        "music_volume":     "0.0",
+        "color_filter":     "colorchannelmixer=rr=0.5:gg=0.7:bb=1.2",
+        "pexels_queries":   ["neon city cyberpunk dark", "futuristic technology glowing",
+                             "hacker dark room screen", "digital matrix code dark"],
+        "upload_instagram": True,        # Tech Drops → Instagram Reels
+        "always_english":   True,        # always English (Gen-Z tone)
     },
 ]
 
-# Songs — horror is audible, others muted
+# Songs per niche
 TRENDING_SONGS_FREE = [
     {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3"},
     {"niche": "horror_story",   "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_6ded321929.mp3"},
@@ -112,18 +132,19 @@ TRENDING_SONGS_FREE = [
     {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
     {"niche": "ai_tools_talk",  "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
     {"niche": "tech_drops",     "url": "https://cdn.pixabay.com/download/audio/2022/08/02/audio_2dde668d05.mp3"},
+    {"niche": "tech_drops",     "url": "https://cdn.pixabay.com/download/audio/2021/11/13/audio_cb31e6deb5.mp3"},
 ]
 
 OUT              = Path("buzzBits_output")
 OUT.mkdir(exist_ok=True)
-PART1_TOPIC_FILE  = OUT / "part1_topic.json"
-USED_TOPICS_FILE  = OUT / "used_topics.json"
-ANALYTICS_FILE    = OUT / "analytics.json"
-client = genai.Client(api_key=GEMINI_API_KEY)
+PART1_TOPIC_FILE = OUT / "part1_topic.json"
+USED_TOPICS_FILE = OUT / "used_topics.json"
+ANALYTICS_FILE   = OUT / "analytics.json"
+client           = genai.Client(api_key=GEMINI_API_KEY)
 
 
 # ══════════════════════════════════════════════════════════════════
-#  TOPIC DEDUPLICATION — prevents repeating same topics
+#  TOPIC DEDUPLICATION
 # ══════════════════════════════════════════════════════════════════
 def load_used_topics() -> dict:
     if not USED_TOPICS_FILE.exists():
@@ -131,28 +152,24 @@ def load_used_topics() -> dict:
     try:
         with open(USED_TOPICS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return {}
+
 
 def save_used_topic(topic: str, niche_name: str):
     topics = load_used_topics()
-    key = topic.lower().strip()
+    key    = topic.lower().strip()
     topics[key] = {"niche": niche_name, "used_at": datetime.datetime.utcnow().isoformat()}
-    # Keep last 500 topics only
     if len(topics) > 500:
-        oldest = sorted(topics.items(), key=lambda x: x[1].get("used_at",""))[:100]
+        oldest = sorted(topics.items(), key=lambda x: x[1].get("used_at", ""))[:100]
         for k, _ in oldest:
             del topics[k]
     with open(USED_TOPICS_FILE, "w", encoding="utf-8") as f:
         json.dump(topics, f, ensure_ascii=False, indent=2)
 
-def is_topic_used(topic: str) -> bool:
-    topics = load_used_topics()
-    return topic.lower().strip() in topics
-
 
 # ══════════════════════════════════════════════════════════════════
-#  ANALYTICS LOGGER — tracks every upload for portfolio metrics
+#  ANALYTICS LOGGER
 # ══════════════════════════════════════════════════════════════════
 def log_analytics(video_result: dict):
     try:
@@ -171,23 +188,51 @@ def log_analytics(video_result: dict):
         })
         with open(ANALYTICS_FILE, "w", encoding="utf-8") as f:
             json.dump(analytics, f, ensure_ascii=False, indent=2)
-        print(f"   📊 Analytics logged ({len(analytics)} total videos)")
+        print(f"   📊 Analytics logged ({len(analytics)} total)")
     except Exception as e:
-        print(f"   ⚠️  Analytics log failed: {e}")
+        print(f"   ⚠️  Analytics failed: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════
+#  TELEGRAM NOTIFICATIONS
+# ══════════════════════════════════════════════════════════════════
+def send_notification(subject: str, body: str):
+    """Send Telegram notification after each pipeline run."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    try:
+        msg  = f"🎬 *{subject}*\n\n{body}"
+        resp = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            print("   📱 Telegram notification sent!")
+        else:
+            print(f"   ⚠️  Telegram failed: {resp.text[:100]}")
+    except Exception as e:
+        print(f"   ⚠️  Notification error: {e}")
 
 
 # ══════════════════════════════════════════════════════════════════
 #  SELECTORS
 # ══════════════════════════════════════════════════════════════════
-def pick_niche(video_index):
-    hour = datetime.datetime.utcnow().hour
-    return NICHES[(hour // 6 + video_index) % len(NICHES)]
+def pick_niche(video_index: int) -> dict:
+    """Pick niche by video index — cycles through all 4 niches."""
+    return NICHES[video_index % len(NICHES)]
 
-def pick_language(video_index):
+
+def pick_language(video_index: int, niche: dict) -> dict:
+    """Pick language — force English for niches that require it."""
+    if niche.get("always_english"):
+        return {"code": "en", **LANG_CONFIG["en"]}
     code = LANG_PATTERN[video_index % len(LANG_PATTERN)]
     return {"code": code, **LANG_CONFIG[code]}
 
-def get_current_part(video_index):
+
+def get_current_part(video_index: int):
+    """Part 1/2 series — only for video index 2 (3rd video per run)."""
     if video_index != 2:
         return None
     hour = datetime.datetime.utcnow().hour
@@ -196,12 +241,14 @@ def get_current_part(video_index):
             return PART_SERIES_SCHEDULE[h]
     return PART_SERIES_SCHEDULE[16]
 
-def save_part1_topic(topic, niche_name, lang_code):
+
+def save_part1_topic(topic: str, niche_name: str, lang_code: str):
     data = {"topic": topic, "niche": niche_name, "lang": lang_code,
             "saved_at": datetime.datetime.utcnow().isoformat()}
     with open(PART1_TOPIC_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"   💾 Part 1 saved: '{topic}'")
+
 
 def load_part1_topic():
     if not PART1_TOPIC_FILE.exists():
@@ -209,159 +256,179 @@ def load_part1_topic():
     try:
         with open(PART1_TOPIC_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return None
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 1 — Generate Script
+#  STEP 1 — Generate Script (with web search + master controller)
 # ══════════════════════════════════════════════════════════════════
 def get_viral_angle(niche_name: str, niche_label: str) -> str:
-    """Search web for currently trending viral angles for this niche."""
+    """Search web for trending viral angles for this niche."""
     try:
-        search_queries = {
-            "horror_story":   f"viral horror story shorts reels 2025 trending",
-            "comedy_facts":   f"viral comedy facts shorts 2025 trending funny",
-            "ai_tools_talk":  f"trending AI tools 2025 free viral shorts",
-            "tech_drops":     f"free github repos productivity tools viral shorts 2025",
+        queries = {
+            "horror_story":  "viral horror story shorts reels 2025 trending",
+            "comedy_facts":  "viral comedy facts shorts 2025 trending funny",
+            "ai_tools_talk": "trending AI tools 2025 free viral shorts",
+            "tech_drops":    "viral free GitHub repos AI tools productivity 2025",
         }
-        query = search_queries.get(niche_name, f"viral {niche_label} shorts 2025")
+        query = queries.get(niche_name, f"viral {niche_label} shorts 2025")
         resp  = requests.get(
             "https://api.search.brave.com/res/v1/web/search",
-            headers={"Accept": "application/json",
-                     "Accept-Encoding": "gzip",
+            headers={"Accept": "application/json", "Accept-Encoding": "gzip",
                      "X-Subscription-Token": "BSAGzGTrqRiZBXc2KhpLfq9WlHPwORv"},
             params={"q": query, "count": 5},
             timeout=8
         )
         if resp.status_code == 200:
-            results = resp.json().get("web", {}).get("results", [])
+            results  = resp.json().get("web", {}).get("results", [])
             snippets = [r.get("description", "") for r in results[:3] if r.get("description")]
             if snippets:
-                return "\nTRENDING CONTEXT (use this to inspire your angle):\n" + " | ".join(snippets[:2])[:400]
+                return "\nTRENDING CONTEXT (use to inspire your angle):\n" + " | ".join(snippets[:2])[:400]
     except Exception:
         pass
-    # Fallback: hardcoded trending angles per niche
+
     fallbacks = {
-        "horror_story":  "Trending: true paranormal encounters, sleep paralysis demons, real haunted locations",
+        "horror_story":  "Trending: true paranormal encounters, sleep paralysis, real haunted locations",
         "comedy_facts":  "Trending: weird animal facts, bizarre laws, shocking historical blunders",
         "ai_tools_talk": "Trending: Sora, Gemini 2.5, Claude 3.7, Grok 3, free AI image generators",
-        "tech_drops":    "Trending: free GitHub repos, hidden AI tools, free Notion/Figma alternatives, productivity hacks",
+        "tech_drops":    "Trending: free GitHub repos, hidden productivity tools, free AI websites no signup",
     }
     return "\nTRENDING CONTEXT: " + fallbacks.get(niche_name, "use the most viral angle possible")
 
 
-def generate_content(niche, video_index, lang, part=None, part1_data=None):
-    lang_label = lang["label"]
+def build_script_instructions(script_style: str, lang: dict, part, part1_data) -> tuple:
+    """Build narration instructions, topic, tags, pexels hints per niche style."""
+
+    part_instruction = ""
+    if part == 1:
+        part_instruction = (
+            f'PART SERIES — THIS IS PART 1 of 2. '
+            f'Narration MUST end with EXACTLY: "{lang["follow_part2"]}" — '
+            f'this is mandatory, last spoken sentence. '
+            f'Title ends with (Part 1). End on cliffhanger.'
+        )
+    elif part == 2:
+        prev = part1_data.get("topic", "previous topic") if part1_data else "previous topic"
+        part_instruction = (
+            f'PART 2 of 2: Continue story from "{prev}". '
+            f'Title ends with (Part 2). Give satisfying conclusion.'
+        )
+
+    if script_style == "story":
+        narration = (
+            "HORROR STORY FORMAT:\n"
+            "Write like whispering a TRUE story to someone at 3am. Conversational but eerie.\n"
+            "Structure:\n"
+            "1. HOOK — first 5 words must make skin crawl. No 'Did you know'. Start with dread.\n"
+            "2. BUILD — location, person, what they heard/saw — sensory, specific details.\n"
+            "3. TWIST — the moment everything changed — delivered calmly, which makes it horrifying.\n"
+            "4. HAUNTING END — one final sentence that lingers. Unresolved. Never fully explained.\n"
+            "150-170 words. Sound like a true crime podcast host — calm, real, terrifying.\n"
+            "ONE continuous paragraph. No line breaks. No filler."
+        )
+        topic     = "ONE specific real haunted location, true paranormal case, or urban legend. Name the place, year, person."
+        tag_ext   = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #ghost #haunted #scary #horrortok"
+        ig_tags   = "#reels #viral #freakybits #horrorstory #scarystory #horror #ghost #paranormal #haunted #creepy #horrortok #scarytiktok #horrorreels #fyp #trending #explore #truecrime #supernatural #chilling #shorts"
+        duration  = "55-65 seconds"
+        pexels    = '["dark foggy forest night", "abandoned building interior dark", "cemetery dark fog", "dark corridor horror"]'
+
+    elif script_style == "dialogue":
+        narration = (
+            "DIALOGUE FORMAT — always English:\n"
+            "Two characters: Alex (hyped about AI) and Sam (skeptical, always asks if free).\n"
+            "Format: \"Did you know [tool] exists? Alex: bro this AI just [does X]. "
+            "Sam: wait is it free? Alex: [yes/no + detail]. Sam: [reaction]. "
+            "Alex: Follow FreakyBits for more free AI drops!\"\n"
+            "120-140 words. Sound like two friends texting — casual, punchy, funny.\n"
+            "ONE continuous string, no line breaks."
+        )
+        topic     = "ONE specific trending AI tool from 2025 or 2026. Name it, its use, its price (free/paid)."
+        tag_ext   = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk #AIShorts"
+        ig_tags   = "#reels #viral #freakybits #aitools #freeai #artificialintelligence #techtalk #newai #aiupdates #technews #futuretech #shorts #fyp #trending #explore #reelsinstagram #viralreels #tech #airevolution #innovation"
+        duration  = "40-50 seconds"
+        pexels    = '["gaming setup neon dark", "esports arena glowing", "neon gaming room dark", "computer screen gaming"]'
+
+    elif script_style == "tech_drops":
+        narration = (
+            "TECH DROPS MASTER CONTROLLER FORMAT — always English:\n"
+            "You are an AI Automation Controller generating viral Gen-Z tech content.\n"
+            "\nSTEP 1 — GENERATE with Gemini: Pick ONE topic from:\n"
+            "  • Free GitHub repositories (AI tools, automation templates, coding hacks)\n"
+            "  • Free AI tools & websites (no signup, unlimited)\n"
+            "  • Hidden productivity tools most people don't know exist\n"
+            "\nSTEP 2 — VALIDATE & IMPROVE the output:\n"
+            "  • Add stronger hook in first 3 seconds\n"
+            "  • Add sarcasm and humor\n"
+            "  • Make it A/B dialogue style (Person A drops knowledge, Person B reacts)\n"
+            "  • Ensure fast pacing — every line punchy\n"
+            "\nSTEP 3 — WRITE the final script:\n"
+            "  Format: A/B dialogue. Example:\n"
+            "  \"Bro wait — this GitHub repo just [does X] for FREE. [B: No way]. "
+            "  I'm not done — it also [does Y]. [B: Bro no way]. "
+            "  And it's open source. [B: Wait what?]. "
+            "  Follow FreakyBits — I drop these daily.\"\n"
+            "  Use pattern interrupts: 'Wait what?', 'Bro no way', 'Hold on—'\n"
+            "  Keep lines SHORT — subtitle friendly.\n"
+            "  20-30 seconds max. 60-80 words total.\n"
+            "  Tone: sarcastic, witty, slightly dramatic.\n"
+            "  Audience: Gen-Z tech people who love free tools.\n"
+            "  ONE continuous string, no line breaks."
+        )
+        topic     = "ONE specific free GitHub repo, free AI website, or hidden productivity tool. Must be real and working."
+        tag_ext   = "#TechDrops #FreeTools #GitHub #FreeAI #ProductivityHacks #CodingTips #TechTips #HiddenGems"
+        ig_tags   = "#reels #viral #freakybits #techdrops #freetools #github #freeai #productivity #codinglife #techhacks #shortcuts #aitools #devtools #nocode #automation #fyp #trending #explore #genZ #techbro"
+        duration  = "20-30 seconds"
+        pexels    = '["neon city cyberpunk dark", "futuristic technology glowing", "hacker dark room screen", "digital matrix code"]'
+
+    else:
+        # Comedy narrator
+        narration = (
+            "COMEDY FACTS FORMAT: Start with 'Did you know' — then deliver 4 shocking funny facts "
+            "like texting a friend who loves weird trivia. "
+            "Add reactions: 'I know right?', 'wait it gets better', 'no seriously'. "
+            "120-140 words. ONE continuous string. End with 'Follow FreakyBits for more wild facts!'"
+        )
+        topic     = "Fresh specific topic — shocking, funny, unbelievable. No overused examples."
+        tag_ext   = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
+        ig_tags   = "#reels #viral #freakybits #shorts #fyp #trending #facts #explore #reelsinstagram #reelsviral #mindblown #amazingfacts #didyouknow #funnyfacts #comedy #foryou"
+        duration  = "40-50 seconds"
+        pexels    = '["colorful confetti explosion", "people laughing outdoors", "bright colorful balloons", "funny animals cute"]'
+
+    return narration, topic, tag_ext, ig_tags, duration, pexels, part_instruction
+
+
+def generate_content(niche: dict, video_index: int, lang: dict, part=None, part1_data=None) -> dict:
     lang_code  = lang["code"]
+    lang_label = lang["label"]
     print(f"\n🤖 [{niche['label']}] [{lang_label}]" + (f" [Part {part}]" if part else ""))
 
     today        = datetime.datetime.utcnow().strftime("%B %d, %Y")
     script_style = niche.get("script_style", "narrator")
 
-    # Language instruction
     lang_instruction = (
         "LANGUAGE: Write EVERYTHING in Hindi (Devanagari). Hashtags stay English."
         if lang_code == "hi" else "LANGUAGE: English throughout."
     )
 
-    # Part series instruction
-    part_instruction = ""
-    if part == 1:
-        part_instruction = (
-            f'PART SERIES — THIS IS PART 1 of 2. '
-            f'The narration MUST end with this EXACT sentence spoken out loud: "{lang["follow_part2"]}" '
-            f'Do NOT skip this. It must be the very last thing said. '
-            f'Title must end with (Part 1). End story on a cliffhanger — do not resolve it.'
-        )
-    elif part == 2:
-        prev = part1_data.get("topic", "previous topic") if part1_data else "previous topic"
-        part_instruction = f'PART 2 of 2: Continue from "{prev}". Title ends with (Part 2). Satisfying conclusion.'
-
-    # Topic deduplication
-    used   = load_used_topics()
-    recent = list(used.keys())[-10:] if used else []
+    # Topic dedup
+    used      = load_used_topics()
+    recent    = list(used.keys())[-10:] if used else []
     avoid_str = (f"\nAVOID these recently used topics: {', '.join(recent)}" if recent else "")
 
-    # Web search for viral trending angle
+    # Web search for viral angle
     print(f"   🔍 Searching viral angles for [{niche['label']}]...")
     viral_context = get_viral_angle(niche["name"], niche["label"])
 
-    # Script format per niche
-    if script_style == "tech_drops":
-        narration_instruction = (
-            "MASTER CONTROLLER FORMAT — always English, sarcastic Gen-Z tone:\n"
-            "Generate A/B dialogue script for a 20-30 second short.\n"
-            "A = excited tech bro who found something free and amazing\n"
-            "B = skeptical Gen-Z who always asks is it free??\n"
-            "EXACT FORMAT: A: [STRONG hook — first 3 words stop the scroll]. "
-            "B: [Wait what? / Bro no way]. "
-            "A: [name the tool + what it does in 1 line]. "
-            "B: [I been paying for this?? / No cap??]. "
-            "A: [how to get it free — 1 sentence]. "
-            "B: [hype reaction]. "
-            "A: [Follow FreakyBits for more free drops!]\n"
-            "RULES: Pattern interrupts only. Short punchy subtitle-friendly lines. "
-            "Sarcastic witty dramatic. 20-30 seconds. Always mention if free. Always English."
-        )
-        topic_instruction  = "Pick ONE specific FREE tool, GitHub repo, or productivity hack trending in 2025-2026. Be VERY specific — name it exactly."
-        tag_extras         = "#TechDrops #FreeTools #GitHub #AITools #ProductivityHacks #FreeAI #DevTools #TechHacks #GenZ #Shorts"
-        ig_tags            = "#reels #viral #freakybits #techdrops #freetools #github #aitools #productivity #coding #devtools #fyp #trending #explore #reelsinstagram #viralreels #freestuff #techhacks #genz #innovation #techtok"
-        duration_note      = "20-30 seconds"
-        pexels_hint        = '["laptop coffee shop aesthetic", "coding dark screen neon", "developer workspace setup", "tech startup modern office"]'
+    # Build instructions
+    narration_instruction, topic_instruction, tag_ext, ig_tags, duration_note, pexels_hint, part_instruction = (
+        build_script_instructions(script_style, lang, part, part1_data)
+    )
 
-    elif script_style == "story":
-        # Horror story — full mini narrative
-        narration_instruction = (
-            "HORROR STORY FORMAT: \n"
-            "Write like you're whispering a true story to someone at 3am. Conversational but eerie.\n"
-            "Structure: \n"
-            "1. HOOK — first 5 words must make skin crawl (not 'Did you know' — start with dread)\n"
-            "2. BUILD — describe the location, the person, what they heard or saw — sensory and specific\n"
-            "3. TWIST — the moment everything changed — delivered calmly which makes it more disturbing\n"
-            "4. END — ONE final sentence that haunts. Unresolved. Lingers. \n"
-            "150-170 words. Use phrases like 'here's what nobody could explain', 'and that's when they noticed'.\n"
-            "Sound like a true crime podcast host — calm, real, terrifying.\n"
-            "ONE continuous paragraph. No line breaks."
-        )
-        topic_instruction  = "Pick ONE specific real haunted location, true paranormal case, or terrifying urban legend. Be specific — name the place, year, or person."
-        tag_extras         = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #CreepyStory #HorrorTok #ghost #haunted #scary"
-        ig_tags            = "#reels #viral #freakybits #horrorstory #scarystory #horror #ghost #paranormal #haunted #creepy #horrortok #scarytiktok #horrorreels #fyp #trending #explore #shortsvideo #truecrime #supernatural #chilling"
-        duration_note      = "55-65 seconds"
-        pexels_hint        = '["dark foggy forest night", "abandoned building interior", "cemetery dark fog", "dark corridor horror"]'
+    prompt = f"""You are a world-class viral short-form video scriptwriter AND an AI Automation Controller.
+Your scripts feel like a friend excitedly telling you something insane — never robotic.
 
-    elif script_style == "dialogue":
-        narration_instruction = (
-            "DIALOGUE FORMAT (always English): \n"
-            "Two characters: Alex (hyped about AI) and Sam (skeptical broke guy who always asks if free).\n"
-            "Format: \"Did you know [tool] exists? Alex: bro this AI just [does X]. Sam: wait is it free? "
-            "Alex: [yes/no + detail]. Sam: [reaction]. Alex: Follow FreakyBits for more free AI drops!\"\n"
-            "120-140 words. Sound like two friends texting — casual, punchy, funny.\n"
-            "ONE continuous string, no line breaks."
-        )
-        topic_instruction  = "Pick ONE specific trending AI tool from 2025 or 2026. Be specific — name it, its main use, its price (free/paid)."
-        tag_extras         = "#AITools #FreeAI #AIUpdates #NewAI #ArtificialIntelligence #TechTalk #AIShorts"
-        ig_tags            = "#reels #viral #freakybits #aitools #freeai #artificialintelligence #techtalk #newai #aiupdates #technews #futuretech #shorts #fyp #trending #explore #reelsinstagram #viralreels #tech #airevolution #innovation"
-        duration_note      = "40-50 seconds"
-        pexels_hint        = '["gaming setup neon dark", "esports arena glowing", "neon gaming room dark", "computer screen gaming"]'''
-
-    else:
-        # Comedy narrator
-        narration_instruction = (
-            "COMEDY FACTS FORMAT: Start with 'Did you know' — then deliver 4 shocking funny facts "
-            "in a conversational tone like you're texting a friend who loves weird trivia. "
-            "Add reactions like 'I know right?', 'wait it gets better', 'no seriously'. "
-            "120-140 words. ONE continuous string. End with 'Follow for more wild facts!'"
-        )
-        topic_instruction  = "Fresh specific topic — shocking, funny, unbelievable. No overused examples."
-        tag_extras         = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
-        ig_tags            = "#reels #viral #freakybits #shorts #fyp #trending #facts #explore #reelsinstagram #reelsviral #viralreels #explorepage #shortsvideo #mindblown #amazingfacts #didyouknow #funnyfacts #comedy #trending2024 #foryou"
-        duration_note      = "40-50 seconds"
-        pexels_hint        = '["colorful confetti explosion", "people laughing outdoors", "bright colorful balloons", "funny animals cute"]'''
-
-    prompt = f"""You are a world-class viral short-form video scriptwriter. Your scripts feel like a friend excitedly telling you something insane — not like someone reading off a teleprompter.
-
-Niche: {niche['label']} | Date: {today} | Duration: {duration_note}
+Niche: {niche['label']} {niche['emoji']} | Date: {today} | Duration: {duration_note}
 {lang_instruction}
 {part_instruction}
 {avoid_str}
@@ -369,24 +436,20 @@ Niche: {niche['label']} | Date: {today} | Duration: {duration_note}
 
 TASK: {topic_instruction}
 
-SCRIPT STYLE — THIS IS CRITICAL:
-Write like you are TALKING to a friend, not reading a script. Use:
-- Short punchy sentences mixed with longer ones
-- Natural pauses implied by punctuation (comma = breath, period = pause)
-- Conversational words: "Okay so", "Here's the thing", "Wait — it gets worse", "And get this"
-- Reactions: "I know, sounds crazy", "No seriously", "That's not even the weirdest part"
-- Never sound robotic. Never list facts dryly.
-
+SCRIPT REQUIREMENTS:
 {narration_instruction}
 
-WRITING RULES:
-- Comedy/AI fact videos MUST start with "Did you know" as first words
-- Horror stories start with something that immediately creates dread
-- Every sentence must make viewer MORE curious or MORE scared
-- Use real names, real places, real years — specifics make stories believable
-- End ALWAYS with spoken CTA: For facts say "Follow FreakyBits for more!" For Part 1 say EXACTLY the follow_part2 phrase provided — this is mandatory and must be the last sentence spoken
-- Write the narration as ONE continuous string — no line breaks, no bullet points
-- Sound like MrBeast or Yes Theory narration style — energetic and human
+WRITING RULES (CRITICAL):
+- Sound like MrBeast or a viral Gen-Z creator — energetic, human, real
+- Use short punchy sentences mixed with longer ones
+- Conversational words: "Okay so", "Here's the thing", "Wait — it gets worse", "And get this"
+- Reactions: "I know, sounds crazy", "No seriously", "That's not even the weirdest part"
+- NEVER sound robotic. NEVER list facts dryly.
+- Comedy/AI facts: MUST start with "Did you know"
+- Horror: start with immediate dread — no "Did you know"
+- Tech Drops: start with "Bro wait—" or "Okay real talk—" or similar Gen-Z opener
+- End ALWAYS with spoken CTA: facts → "Follow FreakyBits for more!", Part 1 → EXACT follow_part2 phrase
+- ONE continuous string for narration — no line breaks, no bullet points
 
 Reply ONLY in valid JSON (no markdown, no extra text):
 {{
@@ -396,21 +459,21 @@ Reply ONLY in valid JSON (no markdown, no extra text):
   "youtube_title": "viral title under 60 chars — curiosity or shock",
   "youtube_description": "3 conversational punchy sentences.\\n\\nSubscribe for daily {niche['label']} {niche['emoji']}!\\n\\n",
   "youtube_viral_caption": "hook under 10 words with emoji",
-  "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} {tag_extras} #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo",
-  "youtube_tags": ["FreakyBits","Shorts","Viral","{niche['name']}","trending","fyp","mindblown","viral","facts"],
+  "youtube_trending_tags": "#Shorts #Viral #FreakyBits #{niche['name']} {tag_ext} #YouTubeShorts #trending #fyp #shortsvideo #reels #viralvideo",
+  "youtube_tags": ["FreakyBits", "Shorts", "Viral", "{niche['name']}", "trending", "fyp", "mindblown", "viral"],
   "instagram_caption": "punchy IG caption 150 chars max with emojis — conversational",
   "instagram_viral_caption": "Reels hook 12 words max 2-3 emojis",
   "instagram_trending_tags": "{ig_tags}",
   "trending_yt_song": "popular song - artist matching niche mood",
   "trending_ig_song": "popular song - artist matching niche mood",
-  "narration": "Write the FULL conversational narration here — sounds like talking to a friend, starts with Did you know for facts, energetic and human, no robotic lines",
+  "narration": "WRITE FULL NARRATION HERE — conversational, human, not robotic",
   "pexels_queries": {pexels_hint}
 }}"""
 
     for attempt in range(3):
         try:
             response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-            raw      = response.text.strip().replace("```json","").replace("```","").strip()
+            raw      = response.text.strip().replace("```json", "").replace("```", "").strip()
             start    = raw.find("{"); end = raw.rfind("}") + 1
             if start != -1 and end > start:
                 raw = raw[start:end]
@@ -438,15 +501,12 @@ Reply ONLY in valid JSON (no markdown, no extra text):
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 2 — Edge TTS (fast neural voice, NO gaps between sentences)
+#  STEP 2 — Edge TTS voiceover
 # ══════════════════════════════════════════════════════════════════
-def generate_voiceover(content, video_idx, lang, niche=None):
-    """Generate voiceover with niche-specific voice and rate."""
-    # Apply horror voice override (deeper, slower voice)
+def generate_voiceover(content: dict, video_idx: int, lang: dict, niche: dict) -> Path:
     voice_settings = dict(lang)
-    if niche and niche.get("name") == "horror_story":
-        override = HORROR_VOICE_OVERRIDE.get(lang["code"], {})
-        voice_settings.update(override)
+    if niche.get("name") == "horror_story":
+        voice_settings.update(HORROR_VOICE_OVERRIDE.get(lang["code"], {}))
         print(f"   🎙️  Edge TTS [Horror] {voice_settings['edge_voice']} {voice_settings['edge_rate']} (slow dramatic)")
     else:
         print(f"   🎙️  Edge TTS [{lang['label']}] {voice_settings['edge_voice']} {voice_settings['edge_rate']}")
@@ -468,8 +528,7 @@ def generate_voiceover(content, video_idx, lang, niche=None):
 
     try:
         asyncio.run(_tts())
-        size_kb = audio_path.stat().st_size // 1024
-        print(f"   ✅ Voice: {audio_path.name} ({size_kb}KB)")
+        print(f"   ✅ Voice: {audio_path.name} ({audio_path.stat().st_size // 1024}KB)")
     except Exception as e:
         print(f"   ⚠️  Edge TTS failed: {e} — gTTS fallback")
         from gtts import gTTS
@@ -480,109 +539,89 @@ def generate_voiceover(content, video_idx, lang, niche=None):
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 3 — Generate Word-by-Word Subtitle SRT
+#  STEP 3 — Subtitles
 # ══════════════════════════════════════════════════════════════════
-def generate_subtitles(content, audio_path, video_idx, lang):
-    """Generate SRT subtitles synced to voice duration."""
+def generate_subtitles(content: dict, audio_path: Path, video_idx: int) -> Path:
     print(f"   📝 Generating subtitles...")
     srt_path = OUT / f"subs_{video_idx:02d}.srt"
 
-    # Get audio duration
     probe = subprocess.run([
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
     ], capture_output=True, text=True)
     total_duration = float(probe.stdout.strip() or 32)
 
-    narration = content["narration"].strip()
-    # Split into chunks of 3-4 words for subtitle display
-    words = narration.split()
-    chunks = []
-    chunk_size = 4
-    for i in range(0, len(words), chunk_size):
-        chunks.append(" ".join(words[i:i+chunk_size]))
-
-    # Distribute time evenly across chunks
+    words          = content["narration"].strip().split()
+    chunk_size     = 4
+    chunks         = [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
     chunk_duration = total_duration / max(len(chunks), 1)
 
-    srt_lines = []
+    def ts(s: float) -> str:
+        h   = int(s // 3600)
+        m   = int((s % 3600) // 60)
+        sec = int(s % 60)
+        ms  = int((s - int(s)) * 1000)
+        return f"{h:02d}:{m:02d}:{sec:02d},{ms:03d}"
+
+    lines = []
     for i, chunk in enumerate(chunks):
         start = i * chunk_duration
         end   = (i + 1) * chunk_duration - 0.05
-
-        def ts(s):
-            h = int(s//3600); m = int((s%3600)//60)
-            sec = int(s%60); ms = int((s - int(s))*1000)
-            return f"{h:02d}:{m:02d}:{sec:02d},{ms:03d}"
-
-        srt_lines.append(f"{i+1}")
-        srt_lines.append(f"{ts(start)} --> {ts(end)}")
-        srt_lines.append(chunk.upper())
-        srt_lines.append("")
+        lines += [str(i + 1), f"{ts(start)} --> {ts(end)}", chunk.upper(), ""]
 
     with open(srt_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(srt_lines))
+        f.write("\n".join(lines))
 
     print(f"   ✅ {len(chunks)} subtitle chunks generated")
     return srt_path
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 4 — Pexels HD clips
+#  STEP 4 — Pexels clips
 # ══════════════════════════════════════════════════════════════════
-def fetch_pexels_clip(query, video_idx, clip_idx):
+def fetch_pexels_clip(query: str, video_idx: int, clip_idx: int) -> Path | None:
     clip_path = OUT / f"clip_{video_idx:02d}_{clip_idx:02d}.mp4"
     print(f"      🔍 '{query}'")
+    headers   = {"Authorization": PEXELS_API_KEY}
 
-    try:
-        headers = {"Authorization": PEXELS_API_KEY}
-        resp = requests.get(
-            "https://api.pexels.com/videos/search",
-            headers=headers,
-            params={"query": query, "per_page": 15, "orientation": "portrait"},
-            timeout=20
-        )
-        resp.raise_for_status()
-        videos = resp.json().get("videos", [])
-
-        # Fallback to landscape if no portrait results
-        if not videos:
-            resp2 = requests.get(
+    for orientation in ["portrait", "landscape"]:
+        try:
+            resp = requests.get(
                 "https://api.pexels.com/videos/search",
                 headers=headers,
-                params={"query": query, "per_page": 15, "orientation": "landscape"},
+                params={"query": query, "per_page": 15, "orientation": orientation},
                 timeout=20
             )
-            videos = resp2.json().get("videos", [])
+            resp.raise_for_status()
+            videos = resp.json().get("videos", [])
+            if not videos:
+                continue
 
-        if not videos:
-            raise ValueError(f"No results for '{query}'")
+            video = videos[clip_idx % len(videos)]
+            files = video.get("video_files", [])
+            hd    = sorted(
+                [f for f in files if f.get("file_type") == "video/mp4" and f.get("height", 0) >= 720],
+                key=lambda x: abs(x.get("height", 0) - 1280)
+            )
+            url = (hd or files)[0]["link"]
 
-        video = videos[clip_idx % len(videos)]
-        files = video.get("video_files", [])
-        # Prefer HD files
-        hd = sorted(
-            [f for f in files if f.get("file_type") == "video/mp4" and f.get("height", 0) >= 720],
-            key=lambda x: abs(x.get("height", 0) - 1280)
-        )
-        url = (hd or files)[0]["link"]
+            r = requests.get(url, timeout=120, stream=True)
+            r.raise_for_status()
+            with open(clip_path, "wb") as f:
+                for chunk in r.iter_content(65536):
+                    f.write(chunk)
 
-        r = requests.get(url, timeout=120, stream=True)
-        r.raise_for_status()
-        with open(clip_path, "wb") as f:
-            for chunk in r.iter_content(65536): f.write(chunk)
+            print(f"      ✅ {clip_path.stat().st_size / (1024*1024):.1f}MB")
+            return clip_path
+        except Exception as e:
+            print(f"      ⚠️  {orientation} failed: {e}")
+            continue
 
-        size_mb = clip_path.stat().st_size / (1024*1024)
-        print(f"      ✅ {size_mb:.1f}MB")
-        return clip_path
-
-    except Exception as e:
-        print(f"      ❌ {e}")
-        return None
+    return None
 
 
-def fetch_all_clips(content, niche, video_idx):
-    queries = content.get("pexels_queries", [])
+def fetch_all_clips(content: dict, niche: dict, video_idx: int) -> list:
+    queries     = content.get("pexels_queries", [])
     all_queries = (queries + niche["pexels_queries"])[:4]
     while len(all_queries) < 4:
         all_queries = (all_queries * 2)[:4]
@@ -592,8 +631,8 @@ def fetch_all_clips(content, niche, video_idx):
     for i, query in enumerate(all_queries):
         clip = fetch_pexels_clip(query, video_idx, i)
         if not clip:
-            # Try niche fallback
-            clip = fetch_pexels_clip(niche["pexels_queries"][i % len(niche["pexels_queries"])], video_idx + 10, i)
+            clip = fetch_pexels_clip(niche["pexels_queries"][i % len(niche["pexels_queries"])],
+                                     video_idx + 10, i)
         if clip:
             clips.append(clip)
         time.sleep(0.3)
@@ -605,18 +644,19 @@ def fetch_all_clips(content, niche, video_idx):
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 5 — Trending Song
+#  STEP 5 — Trending song
 # ══════════════════════════════════════════════════════════════════
-def get_trending_song(niche_name, video_idx):
+def get_trending_song(niche_name: str, video_idx: int) -> Path | None:
     candidates = [s for s in TRENDING_SONGS_FREE if s["niche"] == niche_name] or TRENDING_SONGS_FREE
-    song = candidates[video_idx % len(candidates)]
-    song_path = OUT / f"song_{video_idx:02d}.mp3"
+    song       = candidates[video_idx % len(candidates)]
+    song_path  = OUT / f"song_{video_idx:02d}.mp3"
     try:
         r = requests.get(song["url"], timeout=30, stream=True)
         r.raise_for_status()
         with open(song_path, "wb") as f:
-            for chunk in r.iter_content(8192): f.write(chunk)
-        print(f"   ✅ Song ({song_path.stat().st_size//1024}KB)")
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+        print(f"   ✅ Song ({song_path.stat().st_size // 1024}KB)")
         return song_path
     except Exception as e:
         print(f"   ⚠️  Song failed: {e}")
@@ -624,76 +664,52 @@ def get_trending_song(niche_name, video_idx):
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 6 — Assemble: 9:16 + dark filter + bold subtitles
+#  STEP 6 — Assemble video
 # ══════════════════════════════════════════════════════════════════
-def process_clip(clip_path, output_path, niche, duration=8.0):
-    """Crop to 9:16, apply dark cinematic filter, trim to duration."""
+def process_clip(clip_path: Path, output_path: Path, niche: dict, duration: float = 8.0) -> Path:
     color_filter = niche.get("color_filter", "curves=all='0/0 100/90 200/185 255/240'")
-
     vf = (
         f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
-        f"crop={VIDEO_W}:{VIDEO_H},"
-        f"setsar=1,"
-        f"{color_filter},"
-        f"unsharp=5:5:0.8:3:3:0"   # slight sharpen for crispness
+        f"crop={VIDEO_W}:{VIDEO_H},setsar=1,{color_filter},unsharp=5:5:0.8:3:3:0"
     )
-
     ret = subprocess.run([
-        "ffmpeg", "-y", "-i", str(clip_path),
-        "-t", str(duration),
-        "-vf", vf,
-        "-r", "30", "-c:v", "libx264", "-preset", "fast", "-crf", "22",
-        "-pix_fmt", "yuv420p", "-an", str(output_path)
+        "ffmpeg", "-y", "-i", str(clip_path), "-t", str(duration),
+        "-vf", vf, "-r", "30", "-c:v", "libx264", "-preset", "fast",
+        "-crf", "22", "-pix_fmt", "yuv420p", "-an", str(output_path)
     ], capture_output=True)
-
     if ret.returncode != 0:
-        # Simpler fallback
         subprocess.run([
-            "ffmpeg", "-y", "-i", str(clip_path),
-            "-t", str(duration),
-            "-vf", f"scale={VIDEO_W}:{VIDEO_H},setsar=1",
-            "-an", str(output_path)
+            "ffmpeg", "-y", "-i", str(clip_path), "-t", str(duration),
+            "-vf", f"scale={VIDEO_W}:{VIDEO_H},setsar=1", "-an", str(output_path)
         ], capture_output=True)
     return output_path
 
 
-def burn_subtitles(video_path, srt_path, output_path):
-    """Burn bold white subtitles with black outline onto video."""
-    # Font settings: large, bold, white with thick black shadow
-    subtitle_filter = (
+def burn_subtitles(video_path: Path, srt_path: Path, output_path: Path) -> Path:
+    sub_filter = (
         f"subtitles={srt_path}:force_style='"
-        f"FontName=Arial,"
-        f"FontSize=22,"
-        f"PrimaryColour=&H00FFFFFF,"
-        f"OutlineColour=&H00000000,"
-        f"BackColour=&H80000000,"
-        f"Bold=1,"
-        f"Outline=3,"
-        f"Shadow=2,"
-        f"Alignment=2,"
-        f"MarginV=80'"
+        f"FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,"
+        f"OutlineColour=&H00000000,BackColour=&H80000000,"
+        f"Bold=1,Outline=3,Shadow=2,Alignment=2,MarginV=80'"
     )
-
     ret = subprocess.run([
-        "ffmpeg", "-y", "-i", str(video_path),
-        "-vf", subtitle_filter,
+        "ffmpeg", "-y", "-i", str(video_path), "-vf", sub_filter,
         "-c:v", "libx264", "-preset", "fast", "-crf", "22",
         "-c:a", "copy", str(output_path)
     ], capture_output=True)
-
     if ret.returncode == 0:
-        print(f"   ✅ Subtitles burned")
+        print("   ✅ Subtitles burned")
         return output_path
-    else:
-        print(f"   ⚠️  Subtitle burn failed — using video without subs")
-        return video_path
+    print("   ⚠️  Subtitle burn failed — using video without subs")
+    return video_path
 
 
-def assemble_video(clip_paths, audio_path, srt_path, video_idx, niche, song_path=None):
+def assemble_video(clip_paths: list, audio_path: Path, srt_path: Path | None,
+                   video_idx: int, niche: dict, song_path: Path | None = None) -> Path:
     print("   ✂️  Assembling 9:16 cinematic video...")
     final_path = OUT / f"freakyBits_{video_idx:02d}.mp4"
 
-    # Process all clips: 9:16 + color grade
+    # Process clips
     processed = []
     for i, cp in enumerate(clip_paths):
         pp = OUT / f"proc_{video_idx:02d}_{i:02d}.mp4"
@@ -702,9 +718,8 @@ def assemble_video(clip_paths, audio_path, srt_path, video_idx, niche, song_path
             processed.append(pp)
 
     if not processed:
-        raise RuntimeError("No processed clips")
+        raise RuntimeError("No processed clips available")
 
-    # Pad to 4 clips
     while len(processed) < 4:
         processed.append(processed[-1])
 
@@ -715,75 +730,68 @@ def assemble_video(clip_paths, audio_path, srt_path, video_idx, niche, song_path
             f.write(f"file '{pp.resolve()}'\n")
 
     merged = OUT / f"merged_{video_idx:02d}.mp4"
-    ret = subprocess.run([
+    ret    = subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
         "-i", str(concat_file), "-c", "copy", str(merged)
     ], capture_output=True)
     if ret.returncode != 0:
         raise RuntimeError(f"Concat failed: {ret.stderr.decode()[:200]}")
 
-    # Add audio (voice full vol + muted song)
-    with_audio = OUT / f"audio_{video_idx:02d}.mp4"
+    # Mix audio
+    with_audio   = OUT / f"audio_{video_idx:02d}.mp4"
+    music_volume = niche.get("music_volume", "0.0")
     if song_path and song_path.exists():
         ret = subprocess.run([
             "ffmpeg", "-y",
             "-i", str(merged), "-i", str(audio_path), "-i", str(song_path),
             "-filter_complex",
-            "[1:a]volume=1.0[vo];[2:a]volume={music_vol}[vs];[vo][vs]amix=inputs=2:duration=first[a]".format(music_vol=niche.get("music_volume","0.0")),
+            f"[1:a]volume=1.0[vo];[2:a]volume={music_volume}[vs];[vo][vs]amix=inputs=2:duration=first[a]",
             "-map", "0:v:0", "-map", "[a]",
             "-c:v", "copy", "-c:a", "aac", "-shortest", str(with_audio)
         ], capture_output=True)
     else:
         ret = subprocess.run([
-            "ffmpeg", "-y",
-            "-i", str(merged), "-i", str(audio_path),
+            "ffmpeg", "-y", "-i", str(merged), "-i", str(audio_path),
             "-c:v", "copy", "-c:a", "aac",
             "-map", "0:v:0", "-map", "1:a:0", "-shortest", str(with_audio)
         ], capture_output=True)
 
     if ret.returncode != 0:
-        ret = subprocess.run([
-            "ffmpeg", "-y", "-i", str(merged), "-i", str(audio_path),
-            "-map", "0:v:0", "-map", "1:a:0",
-            "-c:v", "copy", "-c:a", "aac", "-shortest", str(with_audio)
-        ], capture_output=True)
+        raise RuntimeError("Audio mix failed")
 
-    if ret.returncode != 0:
-        raise RuntimeError(f"Audio mix failed")
-
-    # Burn subtitles (skip if srt_path is None — Hindi videos)
+    # Burn subtitles (skip for Hindi)
     if srt_path is not None:
         final_path = burn_subtitles(with_audio, srt_path, final_path)
     else:
         final_path = with_audio
-        print("   ⏭️  No subtitles for Hindi")
+        print("   ⏭️  No subtitles for Hindi video")
 
-    # Get stats
-    probe = subprocess.run([
+    # Stats
+    probe    = subprocess.run([
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=noprint_wrappers=1:nokey=1", str(final_path)
     ], capture_output=True, text=True)
     duration = float(probe.stdout.strip() or 0)
-    size_mb  = Path(final_path).stat().st_size / (1024*1024)
+    size_mb  = Path(final_path).stat().st_size / (1024 * 1024)
     print(f"   ✅ {Path(final_path).name} — {duration:.1f}s, {size_mb:.1f}MB, 9:16 vertical")
     return Path(final_path)
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 7A — YouTube Upload
+#  STEP 7A — YouTube Upload (all 4 niches)
 # ══════════════════════════════════════════════════════════════════
-def upload_youtube(video_path, content):
+def upload_youtube(video_path: Path, content: dict) -> str | None:
     print("   📺 Uploading to YouTube...")
     try:
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
         from google.auth.transport.requests import Request
-        import pickle
     except ImportError:
-        print("   ❌ google libs missing"); return "NOT_UPLOADED"
+        print("   ❌ google libs missing")
+        return None
 
     tok_file = OUT / "yt_token.pickle"
-    creds = None
+    creds    = None
     if tok_file.exists():
         with open(tok_file, "rb") as f:
             creds = pickle.load(f)
@@ -792,15 +800,14 @@ def upload_youtube(video_path, content):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            print("   ❌ No valid token"); return "NO_TOKEN"
+            print("   ❌ No valid YouTube token")
+            return None
         with open(tok_file, "wb") as f:
             pickle.dump(creds, f)
 
     yt = build("youtube", "v3", credentials=creds)
 
-    # Retry logic — exponential backoff (3 attempts)
-    max_retries = 3
-    for attempt in range(1, max_retries + 1):
+    for attempt in range(1, 4):
         try:
             resp = yt.videos().insert(
                 part="snippet,status",
@@ -812,8 +819,8 @@ def upload_youtube(video_path, content):
                         "categoryId":  "22",
                     },
                     "status": {
-                        "privacyStatus": "public",
-                        "selfDeclaredMadeForKids": False,
+                        "privacyStatus":             "public",
+                        "selfDeclaredMadeForKids":   False,
                     }
                 },
                 media_body=MediaFileUpload(str(video_path), mimetype="video/mp4", chunksize=-1, resumable=True)
@@ -822,56 +829,27 @@ def upload_youtube(video_path, content):
             print(f"   ✅ YouTube → {url}")
             return url
         except Exception as e:
-            if attempt < max_retries:
-                wait = 2 ** attempt  # 2s, 4s backoff
-                print(f"   ⚠️  Upload attempt {attempt} failed: {e} — retrying in {wait}s...")
+            if attempt < 3:
+                wait = 2 ** attempt
+                print(f"   ⚠️  Attempt {attempt} failed: {e} — retry in {wait}s")
                 time.sleep(wait)
             else:
-                raise
+                print(f"   ❌ YouTube upload failed: {e}")
+                return None
 
 
 # ══════════════════════════════════════════════════════════════════
-#  STEP 7B — Instagram Upload
+#  STEP 7B — Instagram Upload (Tech Drops niche only)
 # ══════════════════════════════════════════════════════════════════
+def upload_instagram(video_path: Path, content: dict) -> str | None:
+    if not INSTAGRAM_USERNAME or not INSTAGRAM_PASSWORD:
+        print("   ⚠️  Instagram skipped — set INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD in .env")
+        return None
 
-def send_notification(subject, body):
-    """Send Telegram notification after each pipeline run."""
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    try:
-        msg  = f"🎬 *{subject}*\n\n{body}"
-        url  = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        resp = requests.post(url, json={
-            "chat_id":    TELEGRAM_CHAT_ID,
-            "text":       msg,
-            "parse_mode": "Markdown"
-        }, timeout=10)
-        if resp.status_code == 200:
-            print("   📱 Telegram notification sent!")
-        else:
-            print(f"   ⚠️  Telegram failed: {resp.text}")
-    except Exception as e:
-        print(f"   ⚠️  Notification failed: {e}")
-
-
-def upload_instagram(video_path, content):
-    if not INSTAGRAM_TOKEN or INSTAGRAM_TOKEN == "PLACEHOLDER_ADD_LATER":
-        print("   ⚠️  Instagram skipped — add token later")
-        return "SKIPPED"
-
-    print("   📸 Uploading to Instagram...")
-    try:
-        with open(video_path, "rb") as f:
-            r = requests.post("https://file.io", files={"file": f}, data={"expires": "14d"}, timeout=120)
-        video_url = r.json().get("link")
-        if not video_url:
-            raise ValueError("No file.io link")
-    except Exception as e:
-        print(f"   ⚠️  Host failed: {e}"); return "FAILED"
-
+    print("   📸 Uploading to Instagram Reels via instagrapi...")
     try:
         from instagrapi import Client
-        cl = Client()
+        cl      = Client()
         cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
         caption = content.get("instagram_caption_final", content.get("instagram_caption", ""))
         media   = cl.clip_upload(str(video_path), caption)
@@ -885,55 +863,70 @@ def upload_instagram(video_path, content):
 
 
 # ══════════════════════════════════════════════════════════════════
-#  SINGLE VIDEO
+#  SINGLE VIDEO PIPELINE
 # ══════════════════════════════════════════════════════════════════
-def make_one_video(video_idx):
-    niche      = pick_niche(video_idx)
-    lang       = pick_language(video_idx)
-    # AI Tools Talk is always English — override Hindi slot
-    if niche["name"] in ["ai_tools_talk", "tech_drops"] and lang["code"] == "hi":
-        lang = {"code": "en", **LANG_CONFIG["en"]}
-    part       = get_current_part(video_idx)
+def make_one_video(video_idx: int) -> dict:
+    niche = pick_niche(video_idx)
+    lang  = pick_language(video_idx, niche)
+    part  = get_current_part(video_idx)
     part1_data = load_part1_topic() if part == 2 else None
 
     print(f"\n{'─'*62}")
-    print(f"  VIDEO {video_idx+1}/3  |  {niche['label']} {niche['emoji']}  |  {lang['label']}"
+    print(f"  VIDEO {video_idx+1}/{VIDEOS_PER_RUN}  |  {niche['label']} {niche['emoji']}  |  {lang['label']}"
           + (f"  |  Part {part}" if part else ""))
     print(f"{'─'*62}")
 
-    content  = generate_content(niche, video_idx, lang, part, part1_data)
-    audio    = generate_voiceover(content, video_idx, lang, niche)
-    # Skip subtitles for Hindi — not readable on screen
+    content = generate_content(niche, video_idx, lang, part, part1_data)
+    audio   = generate_voiceover(content, video_idx, lang, niche)
+
+    # Skip subtitles for Hindi
     if lang["code"] == "hi":
         srt = None
         print("   ⏭️  Subtitles skipped for Hindi video")
     else:
-        srt      = generate_subtitles(content, audio, video_idx, lang)
-    clips    = fetch_all_clips(content, niche, video_idx)
-    song     = get_trending_song(niche["name"], video_idx)
-    video    = assemble_video(clips, audio, srt, video_idx, niche, song)  # srt=None for Hindi
-    yt_url   = upload_youtube(video, content)
-    # Instagram — Tech Drops niche ONLY
-    if niche.get("upload_instagram", False):
+        srt = generate_subtitles(content, audio, video_idx)
+
+    clips   = fetch_all_clips(content, niche, video_idx)
+    song    = get_trending_song(niche["name"], video_idx)
+    video   = assemble_video(clips, audio, srt, video_idx, niche, song)
+
+    # YouTube — ALL 4 niches upload to YouTube
+    yt_url  = upload_youtube(video, content)
+
+    # Instagram — ONLY niches with upload_instagram=True AND English
+    ig_url = None
+    if niche.get("upload_instagram") and lang["code"] == "en":
         ig_url = upload_instagram(video, content)
+    elif niche.get("upload_instagram") and lang["code"] != "en":
+        print(f"   ⏭️  Instagram skipped for Hindi {niche['label']} video")
     else:
-        ig_url = None
-        print("   ⏭️  Instagram skipped — YT only niche")
+        print(f"   ⏭️  Instagram not enabled for {niche['label']} niche")
 
     if part == 1:
         save_part1_topic(content["topic"], niche["name"], lang["code"])
-
-    # Save used topic to avoid repeats
     save_used_topic(content["topic"], niche["name"])
 
     result = {
-        "video": str(video), "niche": niche["label"], "language": lang["label"],
-        "part": part, "topic": content["topic"], "title": content["youtube_title"],
-        "youtube": yt_url, "instagram": ig_url,
+        "video":     str(video),
+        "niche":     niche["label"],
+        "language":  lang["label"],
+        "part":      part,
+        "topic":     content["topic"],
+        "title":     content["youtube_title"],
+        "youtube":   yt_url,
+        "instagram": ig_url,
     }
 
-    # Log analytics
     log_analytics(result)
+
+    # Telegram notification per video
+    status = "✅ SUCCESS" if yt_url else "⚠️ PARTIAL"
+    send_notification(
+        f"FreakyBits {status} — {niche['label']}",
+        f"Title: {content['youtube_title']}\nTopic: {content['topic']}\n"
+        f"YouTube: {yt_url or 'Failed ❌'}\nInstagram: {ig_url or 'Skipped ⏭️'}\n"
+        f"Time: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+    )
     return result
 
 
@@ -942,19 +935,22 @@ def make_one_video(video_idx):
 # ══════════════════════════════════════════════════════════════════
 def main():
     if not GEMINI_API_KEY:
-        print("❌ GEMINI_API_KEY not set!"); sys.exit(1)
+        print("❌ GEMINI_API_KEY not set!")
+        sys.exit(1)
     if not PEXELS_API_KEY:
-        print("❌ PEXELS_API_KEY not set!"); sys.exit(1)
+        print("❌ PEXELS_API_KEY not set!")
+        sys.exit(1)
 
-    start = time.time()
+    start             = time.time()
     results, failures = [], []
 
-    print("\n" + "═"*62)
-    print(f"  🚀  FreakyBits Auto Pipeline")
+    print("\n" + "═" * 62)
+    print(f"  🚀  FreakyBits Auto Pipeline v4.0")
     print(f"  📅  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
-    print(f"  🎬  3 videos × 4 runs/day = 12/day")
+    print(f"  🎬  4 niches × 4 runs/day = 16 YT videos/day")
+    print(f"  📸  Tech Drops → Instagram Reels (4/day)")
     print(f"  🎙️  Edge TTS neural | 🎥 Pexels 9:16 | 📝 Bold subtitles")
-    print("═"*62)
+    print("═" * 62)
 
     for i in range(VIDEOS_PER_RUN):
         try:
@@ -967,21 +963,35 @@ def main():
             import traceback
             print(f"\n❌ Video {i+1} failed: {e}")
             traceback.print_exc()
-            failures.append({"index": i+1, "error": str(e)})
+            failures.append({"index": i + 1, "error": str(e)})
 
     elapsed = round(time.time() - start)
-    print("\n" + "═"*62)
-    print(f"  ✅  {len(results)}/3 videos  |  {elapsed//60}m {elapsed%60}s")
-    print("═"*62)
+    print("\n" + "═" * 62)
+    print(f"  ✅  {len(results)}/{VIDEOS_PER_RUN} videos  |  {elapsed//60}m {elapsed%60}s")
+    print("═" * 62)
+
     for r in results:
         part_str = f" | Part {r['part']}" if r.get("part") else ""
         print(f"\n  [{r['niche']}][{r['language']}]{part_str} {r['title']}")
         print(f"  📺 {r['youtube']}")
-        print(f"  📸 {r['instagram']}")
+        if r.get("instagram"):
+            print(f"  📸 {r['instagram']}")
+
     if failures:
         print(f"\n  ⚠️  {len(failures)} failed:")
         for f in failures:
             print(f"  Video {f['index']}: {f['error']}")
+
+    # Final Telegram run summary
+    success_count = len(results)
+    fail_count    = len(failures)
+    ig_count      = sum(1 for r in results if r.get("instagram"))
+    send_notification(
+        f"FreakyBits Run Complete — {success_count}/{VIDEOS_PER_RUN} ✅",
+        f"YouTube uploads: {success_count}\nInstagram Reels: {ig_count}\n"
+        f"Failed: {fail_count}\nTime taken: {elapsed//60}m {elapsed%60}s\n"
+        f"Next run: auto via cron"
+    )
 
     log = OUT / f"log_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M')}.json"
     with open(log, "w") as f:
