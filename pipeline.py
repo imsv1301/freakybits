@@ -249,17 +249,34 @@ def send_notification(subject: str, body: str):
     except Exception as e:
         print(f"   ⚠️  Notification error: {e}")
 NICHE_BY_NAME = {n["name"]: n for n in NICHES}
-DAY_NICHES    = ["comedy_facts", "ai_tools_talk"]
+DAY_NICHES      = ["comedy_facts", "ai_tools_talk", "horror_story"]
 NIGHT_UTC_HOURS = range(16, 19)
+
 def _is_night_run() -> bool:
     return datetime.datetime.utcnow().hour in NIGHT_UTC_HOURS
+
 def pick_niche(video_index: int) -> dict:
+    """
+    Slot-based deterministic niche selection:
+    Slot 1 (video_index==1): ALWAYS Tech Drops
+    Slot 0 (video_index==0): Rotate through ALL 3 niches based on hour
+      - 1:30 UTC  (7AM IST)  → Comedy Facts
+      - 6:30 UTC  (12PM IST) → AI Tools Talk
+      - 12:30 UTC (6PM IST)  → Horror Story
+      - 16:30 UTC (10PM IST) → Horror Story (night run)
+    """
     if video_index == 1:
         return NICHE_BY_NAME["tech_drops"]
-    if _is_night_run():
+    hour = datetime.datetime.utcnow().hour
+    # Deterministic rotation based on UTC hour
+    if hour in range(0, 4):      # 7AM IST
+        return NICHE_BY_NAME["comedy_facts"]
+    elif hour in range(4, 9):    # 12PM IST
+        return NICHE_BY_NAME["ai_tools_talk"]
+    elif hour in range(9, 14):   # 6PM IST
+        return NICHE_BY_NAME["comedy_facts"]
+    else:                         # 10PM IST (night)
         return NICHE_BY_NAME["horror_story"]
-    import random
-    return NICHE_BY_NAME[random.choice(DAY_NICHES)]
 def pick_language(video_index: int, niche: dict) -> dict:
     if niche.get("always_english"):
         return {"code": "en", **LANG_CONFIG["en"]}
@@ -323,12 +340,19 @@ def build_script_instructions(script_style, lang, part, part1_data):
         part_instruction = f'PART 2 of 2: Continue story from "{prev}". Title ends with (Part 2). Give satisfying conclusion.'
     if script_style == "story":
         narration = (
-            "HORROR STORY FORMAT:\nWrite like whispering a TRUE story to someone at 3am. Conversational but eerie.\n"
-            "Structure:\n1. HOOK — first 5 words must make skin crawl.\n"
-            "2. BUILD — location, person, what they heard/saw.\n"
-            "3. TWIST — the moment everything changed.\n"
-            "4. HAUNTING END — one final sentence that lingers.\n"
-            "150-170 words. Sound like a true crime podcast host.\nONE continuous paragraph. No line breaks."
+            "HORROR STORY FORMAT — Write for SPOKEN audio delivery, not reading.\n"
+            "Use these TTS emotion markers:\n"
+            "  • ... for a chilling pause (use 3-4 times for dramatic effect)\n"
+            "  • — for a sudden interruption or realization\n"
+            "  • ! for a moment of shock (use sparingly, max 2)\n"
+            "  • CAPITALIZE a word for emphasis\n\n"
+            "Structure (ONE continuous paragraph, 150-170 words):\n"
+            "1. HOOK — 5 words max, immediate dread. Example: 'Nobody checked the basement... ever.'\n"
+            "2. BUILD — sensory details, creeping dread. Whisper-paced sentences.\n"
+            "3. TWIST — delivered CALMLY which makes it MORE terrifying.\n"
+            "4. HAUNTING END — one unresolved sentence that lingers.\n\n"
+            "Example opening: 'The babysitter heard breathing... but the children were asleep.'\n"
+            "Sound like a true crime podcast host — calm, measured, bone-chilling."
         )
         topic   = "ONE specific real haunted location, true paranormal case, or urban legend."
         tag_ext = "#HorrorStory #ScaryStory #HorrorShorts #TrueHorror #Paranormal #ghost #haunted #scary #horrortok"
@@ -359,9 +383,16 @@ def build_script_instructions(script_style, lang, part, part1_data):
         pexels  = '["neon city cyberpunk dark", "futuristic technology glowing", "hacker dark room screen", "digital matrix code"]'
     else:
         narration = (
-            "COMEDY FACTS FORMAT: Start with 'Did you know' — deliver 4 shocking funny facts. "
-            "Add reactions: 'I know right?', 'wait it gets better'. "
-            "120-140 words. End with 'Follow FreakyBits for more wild facts!'"
+            "COMEDY FACTS FORMAT — Write for SPOKEN audio delivery with ENERGY!\n"
+            "Use these TTS emotion markers:\n"
+            "  • ! after every shocking fact for excitement\n"
+            "  • ... for comedic pause before punchline\n"
+            "  • CAPITALIZE words for emphasis\n"
+            "  • — for sudden realizations\n\n"
+            "START with: 'Did you know...' (pause effect)\n"
+            "DELIVER 4 shocking funny facts with REACTIONS between each:\n"
+            "  'Wait — it gets BETTER!', 'I KNOW right?!', 'No seriously!', 'And get THIS!'\n"
+            "120-140 words. High energy throughout. End: 'Follow FreakyBits for more WILD facts!'"
         )
         topic   = "Fresh specific topic — shocking, funny, unbelievable."
         tag_ext = "#Facts #mindblown #didyouknow #amazingfacts #funnyfacts #comedy"
@@ -397,13 +428,16 @@ Niche: {niche['label']} {niche['emoji']} | Date: {today} | Duration: {duration_n
 TASK: {topic_instruction}
 SCRIPT REQUIREMENTS:
 {narration_instruction}
-WRITING RULES:
-- Sound like MrBeast or a viral Gen-Z creator
-- Short punchy sentences mixed with longer ones
-- Comedy/AI facts: MUST start with "Did you know"
-- Horror: start with immediate dread
+WRITING RULES (CRITICAL — FOR SPOKEN AUDIO):
+- Write for EARS not eyes — every sentence must sound natural when spoken
+- Use emotion markers: ... for pauses, ! for excitement, — for interruptions, CAPS for emphasis
+- Sound like MrBeast or a viral Gen-Z creator — ENERGY in every line
+- Short punchy sentences mixed with longer dramatic ones
+- Comedy/AI facts: MUST start with "Did you know..."
+- Horror: start with immediate dread, whisper-paced
 - Tech Drops: start with "Bro wait—" or "Okay real talk—"
-- End ALWAYS with spoken CTA
+- End ALWAYS with spoken CTA delivered with ENERGY
+- NEVER write flat monotone sentences — every line needs a reason to exist
 Reply ONLY in valid JSON (no markdown):
 {{
   "topic": "specific topic/tool/story name",
@@ -728,37 +762,72 @@ def upload_youtube(video_path, content):
                 return None
 def upload_instagram(video_path, content):
     if not INSTAGRAM_USERNAME or not INSTAGRAM_PASSWORD:
-        print("   ⚠️  Instagram skipped — set credentials in .env")
+        print("   ⚠️  Instagram skipped — set INSTAGRAM_USERNAME + INSTAGRAM_PASSWORD in .env")
         return None
-    print("   📸 Uploading to Instagram Reels...")
+    print("   📸 Uploading to Instagram Reels via instagrapi...")
     session_file = OUT / "ig_session.json"
     try:
         from instagrapi import Client
+        from instagrapi.exceptions import LoginRequired, BadPassword, TwoFactorRequired
         cl = Client()
-        cl.delay_range = [1, 3]
+        cl.delay_range = [2, 5]
+        cl.set_locale("en_US")
+        cl.set_timezone_offset(19800)  # IST +5:30
+        # Try loading saved session first
+        logged_in = False
         if session_file.exists():
             try:
                 cl.load_settings(session_file)
                 cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
                 cl.get_timeline_feed()
-            except Exception:
+                print("   ✅ Instagram session restored")
+                logged_in = True
+            except Exception as e:
+                print(f"   ⚠️  Session expired ({e}) — fresh login")
+                session_file.unlink()
                 cl = Client()
-                cl.delay_range = [1, 3]
+                cl.delay_range = [2, 5]
+        if not logged_in:
+            try:
                 cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
                 cl.dump_settings(session_file)
-        else:
-            cl.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
-            cl.dump_settings(session_file)
+                print("   ✅ Instagram fresh login successful")
+            except BadPassword:
+                print("   ❌ Instagram wrong password — check INSTAGRAM_PASSWORD in .env")
+                return None
+            except TwoFactorRequired:
+                print("   ❌ Instagram 2FA required — disable 2FA on @freaky_bits account")
+                return None
+            except Exception as e:
+                print(f"   ❌ Instagram login failed: {e}")
+                return None
         caption = content.get("instagram_caption_final", content.get("instagram_caption", ""))
-        try:
-            media = cl.video_upload_to_reel(str(video_path), caption=caption)
-        except AttributeError:
-            media = cl.clip_upload(str(video_path), caption)
-        url = f"https://www.instagram.com/reel/{media.code}/"
-        print(f"   ✅ Instagram → {url}")
-        return url
+        # Try all available reel upload methods
+        media = None
+        for method_name, method_call in [
+            ("video_upload_to_reel", lambda: cl.video_upload_to_reel(str(video_path), caption=caption)),
+            ("clip_upload",          lambda: cl.clip_upload(str(video_path), caption)),
+            ("video_upload",         lambda: cl.video_upload(str(video_path), caption)),
+        ]:
+            try:
+                media = method_call()
+                print(f"   ✅ Used method: {method_name}")
+                break
+            except AttributeError:
+                continue
+            except Exception as e:
+                print(f"   ⚠️  {method_name} failed: {e}")
+                continue
+        if media:
+            url = f"https://www.instagram.com/reel/{media.code}/"
+            print(f"   ✅ Instagram Reel → {url}")
+            cl.dump_settings(session_file)
+            return url
+        else:
+            print("   ❌ All Instagram upload methods failed")
+            return None
     except Exception as e:
-        print(f"   ❌ Instagram failed: {type(e).__name__}: {e}")
+        print(f"   ❌ Instagram error: {type(e).__name__}: {e}")
         if session_file.exists():
             session_file.unlink()
         return None
