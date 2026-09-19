@@ -1,4 +1,4 @@
-# FreakyBits — AI Video Automation Pipeline
+# FreakyBits: AI video automation pipeline
 
 Fully automated short-form video pipeline. Generates and uploads 6 AI-powered videos a day to YouTube Shorts and Instagram Reels. No manual work after setup.
 
@@ -42,13 +42,13 @@ Upload
 | What | Details |
 |------|---------|
 | Script generation | Gemini 2.5 Flash with viral hooks, SEO titles, hashtags |
-| Voice | Microsoft Edge TTS — Christopher (EN), Madhur (HI) |
+| Voice | Microsoft Edge TTS: Christopher (EN), Madhur (HI) |
 | Video | Pexels HD stock API, 1080x1920, 9:16 portrait |
 | Subtitles | FFmpeg burns bold uppercase word-by-word captions |
 | Niches | Horror, Comedy, AI & Tech, Storytelling |
 | Series format | Part 1 / Part 2 cliffhanger per niche for watch-through |
 | Bilingual | EN and HI rotate across runs |
-| Deduplication | Tracks last 500 topics — never repeats a script |
+| Deduplication | Tracks the last 500 topics so scripts never repeat |
 | Retry logic | Exponential backoff on upload failures |
 | Analytics | Every upload logged to JSON |
 | Cost | Runs on GitHub Actions free tier (~1,200 mins/month) |
@@ -60,8 +60,8 @@ Upload
 ### What you need
 
 - GitHub account
-- Google AI Studio API key (free) — [aistudio.google.com](https://aistudio.google.com)
-- Pexels API key (free) — [pexels.com/api](https://www.pexels.com/api)
+- Google AI Studio API key (free): [aistudio.google.com](https://aistudio.google.com)
+- Pexels API key (free): [pexels.com/api](https://www.pexels.com/api)
 - YouTube OAuth credentials via Google Cloud Console
 
 ### Steps
@@ -144,6 +144,6 @@ freakybits/
 
 ## Built by
 
-**Mohammad Sahil Vahora** — ECE Final Year, Parul University 2026
+**Mohammad Sahil Vahora**, Electronics engineering graduate, BVM Engineering College (GTU). Based in Bristol, UK.
 
 GitHub: [@imsv1301](https://github.com/imsv1301) | Instagram: [@freaky_bits](https://instagram.com/freaky_bits)
